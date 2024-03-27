@@ -9,19 +9,19 @@
 /* Begin PBXBuildFile section */
 		560A1F862BB23FD30065E280 /* BPTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 560A1F852BB23FD30065E280 /* BPTrackerApp.swift */; };
 		560A1F882BB23FD30065E280 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 560A1F872BB23FD30065E280 /* ContentView.swift */; };
-		560A1F8A2BB23FD30065E280 /* Item.swift in Sources */ = {isa = PBXBuildFile; fileRef = 560A1F892BB23FD30065E280 /* Item.swift */; };
 		560A1F8C2BB23FDA0065E280 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 560A1F8B2BB23FDA0065E280 /* Assets.xcassets */; };
 		560A1F902BB23FDA0065E280 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 560A1F8F2BB23FDA0065E280 /* Preview Assets.xcassets */; };
+		560A1F972BB24A820065E280 /* DataModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 560A1F962BB24A820065E280 /* DataModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		560A1F822BB23FD30065E280 /* BPTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BPTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		560A1F852BB23FD30065E280 /* BPTrackerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BPTrackerApp.swift; sourceTree = "<group>"; };
 		560A1F872BB23FD30065E280 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		560A1F892BB23FD30065E280 /* Item.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Item.swift; sourceTree = "<group>"; };
 		560A1F8B2BB23FDA0065E280 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		560A1F8D2BB23FDA0065E280 /* BPTracker.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BPTracker.entitlements; sourceTree = "<group>"; };
 		560A1F8F2BB23FDA0065E280 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		560A1F962BB24A820065E280 /* DataModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -56,7 +56,7 @@
 			children = (
 				560A1F852BB23FD30065E280 /* BPTrackerApp.swift */,
 				560A1F872BB23FD30065E280 /* ContentView.swift */,
-				560A1F892BB23FD30065E280 /* Item.swift */,
+				560A1F962BB24A820065E280 /* DataModel.swift */,
 				560A1F8B2BB23FDA0065E280 /* Assets.xcassets */,
 				560A1F8D2BB23FDA0065E280 /* BPTracker.entitlements */,
 				560A1F8E2BB23FDA0065E280 /* Preview Content */,
@@ -143,7 +143,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				560A1F882BB23FD30065E280 /* ContentView.swift in Sources */,
-				560A1F8A2BB23FD30065E280 /* Item.swift in Sources */,
+				560A1F972BB24A820065E280 /* DataModel.swift in Sources */,
 				560A1F862BB23FD30065E280 /* BPTrackerApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -274,6 +274,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"BPTracker/Preview Content\"";
+				DEVELOPMENT_TEAM = A3U2TBAN9S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -310,6 +311,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"BPTracker/Preview Content\"";
+				DEVELOPMENT_TEAM = A3U2TBAN9S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
