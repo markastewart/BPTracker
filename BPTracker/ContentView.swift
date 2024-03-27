@@ -12,6 +12,7 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var bpDetailResults: [BPDetails]
     let showRecordLimit = 10
+    let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
 
     var body: some View {
         VStack {
@@ -22,14 +23,21 @@ struct ContentView: View {
             
            NavigationSplitView {
                List {
-                   Text("Last \(showRecordLimit) Readings")
+                   if bpDetailResults.count == 0 {
+                       Text("No Readings")
+                   } else {
+                       if bpDetailResults.count < showRecordLimit {
+                           Text("Last \(bpDetailResults.count) Readings")
+                       }
+                       else {
+                           Text("Last \(showRecordLimit) Readings")
+                       }
+                   }
                    ForEach(bpDetailResults.reversed().prefix(showRecordLimit)) { bpRecord in
-                       Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard)).font(.subheadline)
-//                       NavigationLink {
-//                           Text("Item at \(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-//                       } label: {
-//                           Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard)).font(.subheadline)
-//                       }
+                       LazyVGrid(columns: grid2Member) {
+                           Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard)).font(.subheadline)
+                           Text("\(bpRecord.distalic)/\(bpRecord.systalic)").font(.subheadline)
+                       }
                    }
                    .onDelete(perform: deleteItems)
                }
@@ -58,6 +66,8 @@ struct ContentView: View {
     private func addItem() {
         withAnimation {
             let newItem = BPDetails()
+            newItem.distalic = Int.random(in: 98..<140)
+            newItem.systalic = Int.random(in: 65..<120)
             modelContext.insert(newItem)
         }
     }
@@ -68,6 +78,12 @@ struct ContentView: View {
                 modelContext.delete(bpDetailResults[index])
             }
         }
+    }
+}
+
+struct DetailView: View {
+    var body: some View {
+        Text("Hello DetailView")
     }
 }
 
