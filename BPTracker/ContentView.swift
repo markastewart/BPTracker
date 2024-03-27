@@ -13,6 +13,7 @@ struct ContentView: View {
     @Query private var bpDetailResults: [BPDetails]
     let showRecordLimit = 10
     let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
+    @State var showAddView = false
 
     var body: some View {
         VStack {
@@ -46,9 +47,8 @@ struct ContentView: View {
                         EditButton()
                     }
                     ToolbarItem(placement: .navigationBarLeading) {
-                        Button(action: addItem) {
-                            Label("Add Item", systemImage: "plus")
-                        }
+                        Button("Add", action: { showAddView = true })
+                                                .fullScreenCover(isPresented: $showAddView, content: { DetailView() })
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Show Results") {
