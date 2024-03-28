@@ -151,6 +151,7 @@ struct EnterBPInput: View {
 
 struct ShowResults: View {
     @Environment(\.modelContext) private var modelContext
+    @Query private var bpDetailResults: [BPDetails]
     @Binding var showResults: Bool
     @State var bpStartTime = Date()
     @State var bpEndTime = Date()
@@ -160,6 +161,14 @@ struct ShowResults: View {
         HStack {
             Spacer()
             Text("Select Blood Pressure Results").font(.headline).padding(.vertical, 35)
+                .onAppear() {
+                    if let firstBPRec = bpDetailResults.first {
+                        bpStartTime = firstBPRec.timestamp
+                    }
+                    if let lastBPRec = bpDetailResults.last {
+                        bpEndTime = lastBPRec.timestamp
+                    }
+                }
             Spacer()
         }
         
