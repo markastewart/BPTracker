@@ -37,19 +37,23 @@ struct ContentView: View {
                    ForEach(bpDetailResults.reversed().prefix(showRecordLimit)) { bpRecord in
                        LazyVGrid(columns: grid2Member) {
                            Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard)).font(.subheadline)
-                           Text("\(bpRecord.distalic)/\(bpRecord.systalic)").font(.subheadline)
+                           Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
                        }
                    }
                    .onDelete(perform: deleteItems)
                }
                 .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button(action: { showAddView = true }) {
+                            Label("Add item", systemImage: "plus")
+                        }
+                        .fullScreenCover(isPresented: $showAddView, content: { EnterBPResult(showAddView: $showAddView) })
+                    }
+                    
                     ToolbarItem {
                         EditButton()
                     }
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Add", action: { showAddView = true })
-                                                .fullScreenCover(isPresented: $showAddView, content: { DetailView() })
-                    }
+
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Show Results") {
                             //
@@ -63,15 +67,6 @@ struct ContentView: View {
         .background(.gray.opacity(0.50))
     }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = BPDetails()
-            newItem.distalic = Int.random(in: 98..<140)
-            newItem.systalic = Int.random(in: 65..<120)
-            modelContext.insert(newItem)
-        }
-    }
-
     private func deleteItems(offsets: IndexSet) {
         withAnimation {
             for index in offsets {
@@ -81,9 +76,67 @@ struct ContentView: View {
     }
 }
 
-struct DetailView: View {
+struct EnterBPResult: View {
+    @Environment(\.modelContext) private var modelContext
+    @Binding var showAddView: Bool
+    @State var bpTimeStamp = Date()
+    @State var systalicInput = 20
+    @State var diastalicInput = 10
+    var newItem = BPDetails()
+    
     var body: some View {
-        Text("Hello DetailView")
+        HStack {
+            Spacer()
+            Text("Blood Pressure Input").font(.headline).padding(.bottom, 50)
+            Spacer()
+        }
+        
+        VStack {
+            HStack {
+                DatePicker("Date of Reading", selection: $bpTimeStamp, displayedComponents:.date)
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                DatePicker("Time of Reading", selection: $bpTimeStamp, displayedComponents:.hourAndMinute)
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                Text("Systalic:")
+                Picker("", selection: $systalicInput) {
+                    ForEach(90..<151) {
+                        Text("\($0)")
+                    }
+                }
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                Text("Diastalic:")
+                Picker("", selection: $diastalicInput) {
+                    ForEach(70..<121) {
+                        Text("\($0)")
+                    }
+                }
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                Button("Save") {
+                    newItem.timestamp = bpTimeStamp
+                    newItem.systalic = String(systalicInput+90)
+                    newItem.distalic = String(diastalicInput+70)
+                    modelContext.insert(newItem)
+                    showAddView = false
+                }
+                Spacer()
+                Button("Cancel") {
+                    showAddView = false
+                }
+            }.padding(100)
+        }
+        .font(.subheadline)
     }
 }
 

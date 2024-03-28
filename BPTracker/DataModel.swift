@@ -11,12 +11,12 @@ import SwiftData
 @Model
 final class BPDetails {
     var timestamp: Date
-    var systalic: Int
-    var distalic: Int
+    var systalic: String
+    var distalic: String
     
     init() {
         self.timestamp = Date()
-        self.systalic = 0
-        self.distalic = 0
+        self.systalic = ""
+        self.distalic = ""
     }
 }
