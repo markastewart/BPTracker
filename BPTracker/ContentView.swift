@@ -15,7 +15,7 @@ struct ContentView: View {
     let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
     @State var showEnterBPInput = false
     @State var showResults = false
-
+    
     var body: some View {
         VStack {
             HStack {
@@ -23,26 +23,26 @@ struct ContentView: View {
                 Image(systemName: "heart.fill").foregroundStyle(.red)
             }
             
-           NavigationSplitView {
-               List {
-                   if bpDetailResults.count == 0 {
-                       Text("No Readings")
-                   } else {
-                       if bpDetailResults.count < showRecordLimit {
-                           Text("Last \(bpDetailResults.count) Readings")
-                       }
-                       else {
-                           Text("Last \(showRecordLimit) Readings")
-                       }
-                   }
-                   ForEach(bpDetailResults.reversed().prefix(showRecordLimit)) { bpRecord in
-                       LazyVGrid(columns: grid2Member) {
-                           Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard)).font(.subheadline)
-                           Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
-                       }
-                   }
-                   .onDelete(perform: deleteItems)
-               }
+            NavigationSplitView {
+                List {
+                    if bpDetailResults.count == 0 {
+                        Text("No Readings")
+                    } else {
+                        if bpDetailResults.count < showRecordLimit {
+                            Text("Last \(bpDetailResults.count) Readings")
+                        }
+                        else {
+                            Text("Last \(showRecordLimit) Readings")
+                        }
+                    }
+                    ForEach(bpDetailResults.reversed().prefix(showRecordLimit)) { bpRecord in
+                        LazyVGrid(columns: grid2Member) {
+                            Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard)).font(.subheadline)
+                            Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
+                        }
+                    }
+                    .onDelete(perform: deleteItems)
+                }
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button(action: { showEnterBPInput = true }) {
@@ -57,7 +57,7 @@ struct ContentView: View {
                     ToolbarItem {
                         EditButton()
                     }
-
+                    
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Show Results") {
                             showResults = true
@@ -66,7 +66,6 @@ struct ContentView: View {
                             ShowResults(showResults: $showResults)
                                 .presentationCompactAdaptation(.popover)
                         })
-                        //.fullScreenCover(isPresented: $showResultsView, content: { ShowResults(showEnterBPInput: $showResultsView) })
                     }
                 }
             } detail: {
@@ -75,7 +74,7 @@ struct ContentView: View {
         }
         .background(.gray.opacity(0.50))
     }
-
+    
     private func deleteItems(offsets: IndexSet) {
         withAnimation {
             for index in offsets {
@@ -153,10 +152,9 @@ struct EnterBPInput: View {
 struct ShowResults: View {
     @Environment(\.modelContext) private var modelContext
     @Binding var showResults: Bool
-    @State var bpTimeStamp = Date()
-    @State var systalicInput = 20
-    @State var diastalicInput = 10
-    var newItem = BPDetails()
+    @State var bpStartTime = Date()
+    @State var bpEndTime = Date()
+    @State var showReport = false
     
     var body: some View {
         HStack {
@@ -167,46 +165,58 @@ struct ShowResults: View {
         
         VStack {
             HStack {
-                DatePicker("Date of Reading", selection: $bpTimeStamp, displayedComponents:.date)
+                DatePicker("Start Date", selection: $bpStartTime, displayedComponents:.date)
                 Spacer()
             }.padding(.horizontal, 20)
             
             HStack {
-                DatePicker("Time of Reading", selection: $bpTimeStamp, displayedComponents:.hourAndMinute)
+                DatePicker("Start Time", selection: $bpStartTime, displayedComponents:.hourAndMinute)
                 Spacer()
             }.padding(.horizontal, 20)
             
             HStack {
-                Text("Systalic:")
-                Picker("", selection: $systalicInput) {
-                    ForEach(90..<151) {
-                        Text("\($0)")
-                    }
+                DatePicker("End Date", selection: $bpEndTime, displayedComponents:.date)
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                DatePicker("End Time", selection: $bpEndTime, displayedComponents:.hourAndMinute)
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                Button("Show Data") {
+                    showReport = true
                 }
-                Spacer()
-            }.padding(.horizontal, 20)
-            
-            HStack {
-                Text("Diastalic:")
-                Picker("", selection: $diastalicInput) {
-                    ForEach(70..<121) {
-                        Text("\($0)")
-                    }
-                }
-                Spacer()
-            }.padding(.horizontal, 20)
-            
-            HStack {
-                Button("Save") {
-                    newItem.timestamp = bpTimeStamp
-                    newItem.systalic = String(systalicInput+90)
-                    newItem.distalic = String(diastalicInput+70)
-                    modelContext.insert(newItem)
-                    showResults = false
-                }
+                .fullScreenCover(isPresented: $showReport, content: { ShowReport(showReport: $showReport) })
+                
                 Spacer()
                 Button("Cancel") {
                     showResults = false
+                }
+            }.padding(.horizontal, 50).padding(.vertical,20)
+        }
+        .font(.subheadline)
+    }
+}
+
+struct ShowReport: View {
+    @Environment(\.modelContext) private var modelContext
+    @Binding var showReport: Bool
+    @State var bpStartTime = Date()
+    @State var bpEndTime = Date()
+    
+    var body: some View {
+        HStack {
+            Spacer()
+            Text("Blood Pressure Results").font(.headline).padding(.vertical, 35)
+            Spacer()
+        }
+        
+        VStack {
+            HStack {
+                Button("Cancel") {
+                    showReport = false
                 }
             }.padding(.horizontal, 50).padding(.vertical,20)
         }
