@@ -11,7 +11,6 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var bpDetailResults: [BPDetails]
-    let showRecordLimit = 10
     let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
     @State var showEnterBPInput = false
     @State var showResults = false
@@ -24,20 +23,16 @@ struct ContentView: View {
             }
             
             NavigationSplitView {
+                if bpDetailResults.count == 0 {
+                    Text("No Readings").fontWeight(.bold)
+                } else {
+                    Text("Most Recent Readings").fontWeight(.bold)
+                }
+                
                 List {
-                    if bpDetailResults.count == 0 {
-                        Text("No Readings")
-                    } else {
-                        if bpDetailResults.count < showRecordLimit {
-                            Text("Last \(bpDetailResults.count) Readings")
-                        }
-                        else {
-                            Text("Last \(showRecordLimit) Readings")
-                        }
-                    }
-                    ForEach(bpDetailResults.reversed().prefix(showRecordLimit)) { bpRecord in
+                    ForEach(bpDetailResults) { bpRecord in
                         LazyVGrid(columns: grid2Member) {
-                            Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard)).font(.subheadline)
+                            Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened)).font(.subheadline)
                             Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
                         }
                     }
