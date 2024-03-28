@@ -13,7 +13,8 @@ struct ContentView: View {
     @Query private var bpDetailResults: [BPDetails]
     let showRecordLimit = 10
     let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
-    @State var showAddView = false
+    @State var showEnterBPInput = false
+    @State var showResults = false
 
     var body: some View {
         VStack {
@@ -44,10 +45,13 @@ struct ContentView: View {
                }
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        Button(action: { showAddView = true }) {
+                        Button(action: { showEnterBPInput = true }) {
                             Label("Add item", systemImage: "plus")
                         }
-                        .fullScreenCover(isPresented: $showAddView, content: { EnterBPResult(showAddView: $showAddView) })
+                        .popover(isPresented: $showEnterBPInput, content: {
+                            EnterBPInput(showEnterBPInput: $showEnterBPInput)
+                                .presentationCompactAdaptation(.popover)
+                        })
                     }
                     
                     ToolbarItem {
@@ -56,8 +60,13 @@ struct ContentView: View {
 
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Show Results") {
-                            //
+                            showResults = true
                         }
+                        .popover(isPresented: $showResults, content: {
+                            ShowResults(showResults: $showResults)
+                                .presentationCompactAdaptation(.popover)
+                        })
+                        //.fullScreenCover(isPresented: $showResultsView, content: { ShowResults(showEnterBPInput: $showResultsView) })
                     }
                 }
             } detail: {
@@ -76,9 +85,9 @@ struct ContentView: View {
     }
 }
 
-struct EnterBPResult: View {
+struct EnterBPInput: View {
     @Environment(\.modelContext) private var modelContext
-    @Binding var showAddView: Bool
+    @Binding var showEnterBPInput: Bool
     @State var bpTimeStamp = Date()
     @State var systalicInput = 20
     @State var diastalicInput = 10
@@ -87,7 +96,7 @@ struct EnterBPResult: View {
     var body: some View {
         HStack {
             Spacer()
-            Text("Blood Pressure Input").font(.headline).padding(.bottom, 50)
+            Text("Blood Pressure Input").font(.headline).padding(.vertical, 35)
             Spacer()
         }
         
@@ -128,17 +137,83 @@ struct EnterBPResult: View {
                     newItem.systalic = String(systalicInput+90)
                     newItem.distalic = String(diastalicInput+70)
                     modelContext.insert(newItem)
-                    showAddView = false
+                    showEnterBPInput = false
                 }
                 Spacer()
                 Button("Cancel") {
-                    showAddView = false
+                    showEnterBPInput = false
                 }
-            }.padding(100)
+            }.padding(.horizontal, 50).padding(.vertical,20)
         }
         .font(.subheadline)
     }
 }
+
+
+struct ShowResults: View {
+    @Environment(\.modelContext) private var modelContext
+    @Binding var showResults: Bool
+    @State var bpTimeStamp = Date()
+    @State var systalicInput = 20
+    @State var diastalicInput = 10
+    var newItem = BPDetails()
+    
+    var body: some View {
+        HStack {
+            Spacer()
+            Text("Select Blood Pressure Results").font(.headline).padding(.vertical, 35)
+            Spacer()
+        }
+        
+        VStack {
+            HStack {
+                DatePicker("Date of Reading", selection: $bpTimeStamp, displayedComponents:.date)
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                DatePicker("Time of Reading", selection: $bpTimeStamp, displayedComponents:.hourAndMinute)
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                Text("Systalic:")
+                Picker("", selection: $systalicInput) {
+                    ForEach(90..<151) {
+                        Text("\($0)")
+                    }
+                }
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                Text("Diastalic:")
+                Picker("", selection: $diastalicInput) {
+                    ForEach(70..<121) {
+                        Text("\($0)")
+                    }
+                }
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                Button("Save") {
+                    newItem.timestamp = bpTimeStamp
+                    newItem.systalic = String(systalicInput+90)
+                    newItem.distalic = String(diastalicInput+70)
+                    modelContext.insert(newItem)
+                    showResults = false
+                }
+                Spacer()
+                Button("Cancel") {
+                    showResults = false
+                }
+            }.padding(.horizontal, 50).padding(.vertical,20)
+        }
+        .font(.subheadline)
+    }
+}
+
 
 #Preview {
     ContentView()
