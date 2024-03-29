@@ -10,7 +10,7 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var bpDetailResults: [BPDetails]
+    @Query var bpDetailResults: [BPDetails]
     let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
     @State var showEnterBPInput = false
     @State var showResults = false
@@ -29,14 +29,25 @@ struct ContentView: View {
                     Text("Most Recent Readings").fontWeight(.bold)
                 }
                 
-                List {
-                    ForEach(bpDetailResults) { bpRecord in
-                        LazyVGrid(columns: grid2Member) {
-                            Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened)).font(.subheadline)
-                            Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
+                ScrollViewReader { scrollView in
+                    ScrollView {
+                        ForEach(bpDetailResults) { bpRecord in
+                            LazyVGrid(columns: grid2Member) {
+                                Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened)).font(.subheadline)
+                                Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
+                            }.id(bpRecord.id)
                         }
+                        .onDelete(perform: deleteItems)
+                        .onChange (of: bpDetailResults.count) {
+                            scrollView.scrollTo(bpDetailResults[bpDetailResults.count - 1].id)
+                        }
+                        .onAppear (perform: {
+                            DispatchQueue.main.async() {
+                                scrollView.scrollTo(bpDetailResults[bpDetailResults.count - 1].id)
+                            }
+                        })
                     }
-                    .onDelete(perform: deleteItems)
+                    .frame(height: 550)
                 }
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
