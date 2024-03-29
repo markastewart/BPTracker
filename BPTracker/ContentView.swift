@@ -189,17 +189,7 @@ struct ShowResults: View {
             }.padding(.horizontal, 20)
             
             HStack {
-                DatePicker("Start Time", selection: $bpStartTime, displayedComponents:.hourAndMinute)
-                Spacer()
-            }.padding(.horizontal, 20)
-            
-            HStack {
                 DatePicker("End Date", selection: $bpEndTime, displayedComponents:.date)
-                Spacer()
-            }.padding(.horizontal, 20)
-            
-            HStack {
-                DatePicker("End Time", selection: $bpEndTime, displayedComponents:.hourAndMinute)
                 Spacer()
             }.padding(.horizontal, 20)
             
