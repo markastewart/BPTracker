@@ -40,7 +40,8 @@ struct ContentView: View {
                         }
                         .onDelete(perform: deleteItems)
                         .onChange (of: bpDetailResults.count) {
-                            scrollView.scrollTo(bpDetailResults[bpDetailResults.count - 1].id)
+                            let lastRecord = bpDetailResults.count - 1
+                            scrollView.scrollTo(bpDetailResults[lastRecord].id)
                         }
                         .onAppear (perform: {
                             DispatchQueue.main.async() {
@@ -48,7 +49,7 @@ struct ContentView: View {
                             }
                         })
                     }
-                    .frame(height: 550)
+                    .frame(height: 530)
                 }
                 .toolbar {
                     ToolbarItem {
