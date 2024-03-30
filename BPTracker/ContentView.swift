@@ -10,7 +10,7 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query var bpDetailResults: [BPDetails]
+    @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
     let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
     @State var showEnterBPInput = false
     @State var showResults = false
