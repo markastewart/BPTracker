@@ -162,7 +162,7 @@ struct EnterBPInput: View {
 
 struct ShowResults: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var bpDetailResults: [BPDetails]
+    @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
     @Binding var showResults: Bool
     @State var bpStartTime = Date()
     @State var bpEndTime = Date()
