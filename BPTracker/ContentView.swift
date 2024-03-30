@@ -7,6 +7,8 @@
 
 import SwiftUI
 import SwiftData
+import PrintingKit
+import PDFKit
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
@@ -212,15 +214,36 @@ struct ShowResults: View {
 
 struct ShowReport: View {
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
+    let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
     @Binding var showReport: Bool
     @State var bpStartTime = Date()
     @State var bpEndTime = Date()
+    private let printer = Printer()
     
     var body: some View {
         HStack {
             Spacer()
             Text("Blood Pressure Results").font(.headline).padding(.vertical, 35)
             Spacer()
+        }
+        CreateReport()
+        printButton("Print Results", Image(systemName: "printer")) {
+            let view = CreateReport().frame(width:800)
+//            let view = VStack {
+//                    //ScrollViewReader { scrollView in
+//                ScrollView {
+//                    ForEach(bpDetailResults) { bpRecord in
+//                        LazyVGrid(columns: grid2Member) {
+//                            Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened)).font(.subheadline)
+//                            Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
+//                        }.id(bpRecord.id)
+//                    }
+//                }
+//                .frame(height: 530)
+//            }.font(.subheadline).frame(width: 300, height: 600)
+            let printableView = try? PrintItem.view(view)
+            tryPrintItem(printableView)
         }
         
         VStack {
@@ -231,6 +254,48 @@ struct ShowReport: View {
             }.padding(.horizontal, 50).padding(.vertical,20)
         }
         .font(.subheadline)
+    }
+    
+    func printButton(
+        _ title: String,
+        _ icon: Image,
+        _ action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label { Text(title) } icon: { icon }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+    }
+    
+    func tryPrintItem(_ item: PrintItem?) {
+        guard let item else { return }
+        do {
+            try printer.print(item)
+        } catch {
+            print(error)
+        }
+    }
+}
+
+struct CreateReport: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
+    let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
+    @State var bpStartTime = Date()
+    @State var bpEndTime = Date()
+    
+    var body: some View {
+        VStack {
+            ScrollView {
+                ForEach(bpDetailResults) { bpRecord in
+                    LazyVGrid(columns: grid2Member) {
+                        Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened)).font(.subheadline)
+                        Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
+                    }
+                }
+            }
+        }.font(.subheadline).frame(width: 300, height: 600)
     }
 }
 
