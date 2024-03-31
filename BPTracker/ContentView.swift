@@ -10,6 +10,15 @@ import SwiftData
 import PrintingKit
 import PDFKit
 
+public extension View {
+    @MainActor
+    func snapshot(scale: CGFloat? = nil) -> UIImage? {
+        let renderer = ImageRenderer(content: self)
+        renderer.scale = scale ?? UIScreen.main.scale
+        return renderer.uiImage
+    }
+}
+
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
@@ -163,7 +172,6 @@ struct EnterBPInput: View {
 
 
 struct ShowResults: View {
-    @Environment(\.modelContext) private var modelContext
     @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
     @Binding var showResults: Bool
     @State var bpStartTime = Date()
@@ -213,13 +221,11 @@ struct ShowResults: View {
 }
 
 struct ShowReport: View {
-    @Environment(\.modelContext) private var modelContext
     @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
     let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
     @Binding var showReport: Bool
     @State var bpStartTime = Date()
     @State var bpEndTime = Date()
-    private let printer = Printer()
     
     var body: some View {
         HStack {
@@ -227,24 +233,8 @@ struct ShowReport: View {
             Text("Blood Pressure Results").font(.headline).padding(.vertical, 35)
             Spacer()
         }
-        CreateReport()
-        printButton("Print Results", Image(systemName: "printer")) {
-            let view = CreateReport().frame(width:800)
-//            let view = VStack {
-//                    //ScrollViewReader { scrollView in
-//                ScrollView {
-//                    ForEach(bpDetailResults) { bpRecord in
-//                        LazyVGrid(columns: grid2Member) {
-//                            Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened)).font(.subheadline)
-//                            Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
-//                        }.id(bpRecord.id)
-//                    }
-//                }
-//                .frame(height: 530)
-//            }.font(.subheadline).frame(width: 300, height: 600)
-            let printableView = try? PrintItem.view(view)
-            tryPrintItem(printableView)
-        }
+
+        PDFGrid()
         
         VStack {
             HStack {
@@ -255,52 +245,94 @@ struct ShowReport: View {
         }
         .font(.subheadline)
     }
-    
-    func printButton(
-        _ title: String,
-        _ icon: Image,
-        _ action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Label { Text(title) } icon: { icon }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-        }
-    }
-    
-    func tryPrintItem(_ item: PrintItem?) {
-        guard let item else { return }
-        do {
-            try printer.print(item)
-        } catch {
-            print(error)
-        }
+}
+
+struct GridView: View {
+    var text: String
+
+    var body: some View {
+        Text(text)
+            .font(.subheadline)
     }
 }
 
-struct CreateReport: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
-    let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
-    @State var bpStartTime = Date()
-    @State var bpEndTime = Date()
+struct PDFGrid: View {
+    @Query(sort: \BPDetails.timestamp) var allRecords: [BPDetails]
+    @State var records = [String]()
     
     var body: some View {
-        VStack {
+        NavigationStack {
+                // I have chosen to have 20 views per page
+            ShareLink("Export Data", item: render(viewsPerPage: 20))
             ScrollView {
-                ForEach(bpDetailResults) { bpRecord in
-                    LazyVGrid(columns: grid2Member) {
-                        Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened)).font(.subheadline)
-                        Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
+                LazyVGrid(columns: [GridItem()]) {
+                    ForEach(records, id: \.self) { item in
+                        GridView(text: item)
                     }
                 }
             }
-        }.font(.subheadline).frame(width: 300, height: 600)
+        }
+        .onAppear {
+                // Format records into printable content
+            records = formatRecords(records: allRecords)
+        }
     }
-}
-
-
-#Preview {
-    ContentView()
-        .modelContainer(for: BPDetails.self, inMemory: true)
+    
+    func formatRecords(records: [BPDetails]) -> [String] {
+            // Example: Format records into strings for printing
+        return records.map { record in
+            return "\(record.timestamp.formatted(date: .numeric, time: .shortened)) - BP: \(record.systalic)/\(record.distalic)"
+        }
+    }
+    
+    
+    @MainActor func render(viewsPerPage: Int) -> URL {
+            // Save it to our documents directory
+        let url = URL.documentsDirectory.appending(path: "BPReport.pdf")
+        
+            // Tell SwiftUI our PDF should be of certain size
+        var box = CGRect(x: 0, y: 0, width: 600, height: 1200)
+        
+            // Create the CGContext for our PDF pages
+        guard let pdf = CGContext(url as CFURL, mediaBox: &box, nil) else {
+            return url
+        }
+        
+            // Calculate number of pages based on passed amount of viewsPerPage
+            // you would like to have
+        let numberOfPages = records.count / viewsPerPage
+        
+        var index = 0
+        for _ in 0..<numberOfPages {
+            
+                // Start a new PDF page
+            pdf.beginPDFPage(nil)
+            
+                // Render necessary views
+            for num in 0..<viewsPerPage {
+                let renderer = ImageRenderer(content: GridView(text: records[index]))
+                renderer.render { size, context in
+                    
+                        // Will place the view in the middle of pdf on x-axis
+                    let xTranslation = box.size.width / 2 - size.width / 2
+                    
+                        // Spacing between the views on y-axis
+                    let spacing: CGFloat = 30
+                    
+                        // TODO: - View starts printing from bottom, need to inverse Y position
+                    pdf.translateBy(
+                        x: xTranslation - min(max(CGFloat(num) * xTranslation, 0), xTranslation),
+                        y: size.height + spacing
+                    )
+                        // Render the SwiftUI view data onto the page
+                    context(pdf)
+                        // End the page and close the file
+                }
+                index += 1
+            }
+            pdf.endPDFPage()
+        }
+        pdf.closePDF()
+        return url
+    }
 }
