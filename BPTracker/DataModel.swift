@@ -12,13 +12,15 @@ import SwiftData
 final class BPDetails {
     var id: UUID
     var timestamp: Date
-    var systalic: String
-    var distalic: String
+    var systalic: Int
+    var distalic: Int
+    var totalmmHg: Int
     
     init() {
         self.id = UUID()
         self.timestamp = Date()
-        self.systalic = ""
-        self.distalic = ""
+        self.systalic = 0
+        self.distalic = 0
+        self.totalmmHg = 0
     }
 }

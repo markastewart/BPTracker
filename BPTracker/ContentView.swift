@@ -153,8 +153,8 @@ struct EnterBPInput: View {
             HStack {
                 Button("Save") {
                     newItem.timestamp = bpTimeStamp
-                    newItem.systalic = String(systalicInput+90)
-                    newItem.distalic = String(diastalicInput+70)
+                    newItem.systalic = systalicInput+90
+                    newItem.distalic = diastalicInput+70
                     modelContext.insert(newItem)
                     showEnterBPInput = false
                 }
@@ -302,7 +302,6 @@ struct ShowReportSegment: View {
         let pageCount = (Double (recordCount) / Double (recordsPerPage)).rounded(.up)
         
         let recordsInSegment = Int(pageCount-1) == segment ? (records.count - (segment * recordsPerPage)) : recordsPerPage
-        let hold=5
         
         ForEach (0..<recordsInSegment, id: \.self) { index in
             let arrayIndex = index+(segment*recordsPerPage)
