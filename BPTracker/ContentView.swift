@@ -174,8 +174,8 @@ struct EnterBPInput: View {
 struct ShowResults: View {
     @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
     @Binding var showResults: Bool
-    @State var bpStartTime = Date()
-    @State var bpEndTime = Date()
+    @State var startDate = Date()
+    @State var endDate = Date()
     @State var showReport = false
     
     var body: some View {
@@ -184,10 +184,10 @@ struct ShowResults: View {
             Text("Select Blood Pressure Results").font(.headline).padding(.vertical, 35)
                 .onAppear() {
                     if let firstBPRec = bpDetailResults.first {
-                        bpStartTime = firstBPRec.timestamp
+                        startDate = firstBPRec.timestamp
                     }
                     if let lastBPRec = bpDetailResults.last {
-                        bpEndTime = lastBPRec.timestamp
+                        endDate = lastBPRec.timestamp
                     }
                 }
             Spacer()
@@ -195,12 +195,12 @@ struct ShowResults: View {
         
         VStack {
             HStack {
-                DatePicker("Start Date", selection: $bpStartTime, displayedComponents:.date)
+                DatePicker("Start Date", selection: $startDate, displayedComponents:.date)
                 Spacer()
             }.padding(.horizontal, 20)
             
             HStack {
-                DatePicker("End Date", selection: $bpEndTime, displayedComponents:.date)
+                DatePicker("End Date", selection: $endDate, displayedComponents:.date)
                 Spacer()
             }.padding(.horizontal, 20)
             
@@ -208,9 +208,10 @@ struct ShowResults: View {
                 Button("Show Data") {
                     showReport = true
                 }
-                .fullScreenCover(isPresented: $showReport, content: { ShowReport(showReport: $showReport) })
+                .fullScreenCover(isPresented: $showReport, content: { ShowReport(showReport: $showReport, startDate: $startDate, endDate: $endDate) })
                 
                 Spacer()
+                
                 Button("Cancel") {
                     showResults = false
                 }
@@ -222,22 +223,51 @@ struct ShowResults: View {
 
 struct ShowReport: View {
     @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
-    let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
     @Binding var showReport: Bool
-    @State var bpStartTime = Date()
-    @State var bpEndTime = Date()
+    @Binding var startDate: Date
+    @Binding var endDate: Date
+    @State var records = [String]()
+    
     
     var body: some View {
-        HStack {
-            Spacer()
-            Text("Blood Pressure Results").font(.headline).padding(.vertical, 35)
-            Spacer()
+        ShowReportTitle(startDate: $startDate, endDate:$endDate)
+        
+        let recordsPerPage = 25
+        let recordCount = bpDetailResults.count
+        let pageCount = (Double (recordCount) / Double (recordsPerPage)).rounded(.up)
+        
+        
+        ScrollView {
+            ForEach(0..<Int(pageCount), id: \.self) { index in
+                ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:index, records: formatRecords(records: bpDetailResults))
+            }
         }
-
-        PDFGrid()
         
         VStack {
             HStack {
+                Button("Print") {
+                    let page1View = VStack {
+                        ShowReportTitle(startDate: $startDate, endDate:$endDate)
+                        ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:0, records: formatRecords(records: bpDetailResults))
+                    }.font(.subheadline)
+                    let page1Image = page1View.snapshot()!
+                    let page2View = VStack {
+                        ShowReportTitle(startDate: $startDate, endDate:$endDate)
+                        ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:1, records: formatRecords(records: bpDetailResults))
+                    }.font(.subheadline)
+                    let page2Image = page2View.snapshot()!
+                    
+                    DispatchQueue.main.async {
+                        let info = UIPrintInfo(dictionary: nil)
+                        info.outputType = .general
+                        info.jobName = "Standard Printer Job"
+                        let printView = UIPrintInteractionController.shared
+                        printView.printingItems = [page1Image, page2Image]
+                        printView.printInfo = info
+                        printView.present(animated: true)
+                    }
+                }
+                
                 Button("Cancel") {
                     showReport = false
                 }
@@ -245,224 +275,44 @@ struct ShowReport: View {
         }
         .font(.subheadline)
     }
-}
-
-
-struct PDFGrid: View {
-    @Query(sort: \BPDetails.timestamp) var allRecords: [BPDetails]
-    @State var records = [String]()
-    
-        // Main UI
-    var body: some View {
-        Button("Save PDF") {
-            savePDF()
-        }
-        PDFKitView(pdfData: PDFDocument(data: generatePDF(records: records))!)
-            .onAppear {
-                    // Format records into printable content
-                records = formatRecords(records: allRecords)
-            }
-    }
     
     func formatRecords(records: [BPDetails]) -> [String] {
-            // Example: Format records into strings for printing
         return records.map { record in
             return "\(record.timestamp.formatted(date: .numeric, time: .shortened)) - BP: \(record.systalic)/\(record.distalic)"
         }
     }
-    
-        // Generating PDF
-    @MainActor
-    private func generatePDF(records: [String]) -> Data {
-        
-        let pdfRenderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842)) // A4 paper size
-        
-        let data = pdfRenderer.pdfData { context in
-            
-            context.beginPage()
-            
-            let attributes = [
-                NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: 16)
-            ]
-                // adding text to pdf
-var y=50
-            var text = "BP Report: 03/31/2024"
-            text.draw(at: CGPoint(x: 20, y: y), withAttributes: attributes)
-            text = "Data Range: 03/04/2024 - 03/31/2024"
-            y=y+20
-            text.draw(at: CGPoint(x: 20, y: y), withAttributes: attributes)
-            
-            let viewsPerPage = 20
-            let numberOfPages = records.count / viewsPerPage
-            var index = 0
-            for _ in 0..<numberOfPages {
-                for _ in 0..<viewsPerPage {
-                    text = records[index]
-                    y=y+20
-                    text.draw(at: CGPoint(x: 20, y: y), withAttributes: attributes)
-                    index += 1
-                }
-            }
-        }
-        return data
-    }
-    
-    
-    
-        // Saving PDF
-    @MainActor func savePDF() {
-        let fileName = "GeneratedPDF.pdf"
-        let pdfData = generatePDF(records: records)
-        
-        if let documentDirectories = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-            let documentURL = documentDirectories.appendingPathComponent(fileName)
-            do {
-                try pdfData.write(to: documentURL)
-                print("PDF saved at: \(documentURL)")
-            } catch {
-                print("Error saving PDF: \(error.localizedDescription)")
-            }
-        }
-    }
-    
 }
-
-// PDF Viewer
-struct PDFKitView: UIViewRepresentable {
+struct ShowReportTitle: View {
+    @Binding var startDate: Date
+    @Binding var endDate: Date
     
-    let pdfDocument: PDFDocument
-    
-    init(pdfData pdfDoc: PDFDocument) {
-        self.pdfDocument = pdfDoc
-    }
-    
-    func makeUIView(context: Context) -> PDFView {
-        let pdfView = PDFView()
-        pdfView.document = pdfDocument
-        pdfView.autoScales = true
-        return pdfView
-    }
-    
-    func updateUIView(_ pdfView: PDFView, context: Context) {
-        pdfView.document = pdfDocument
+    var body: some View {
+        VStack {
+            Text("Blood Pressure Results  - \(Date().formatted(date: .abbreviated, time: .omitted))")
+            Text("Results for \(startDate.formatted(date: .abbreviated, time: .omitted)) to \(endDate.formatted(date: .abbreviated, time: .omitted))")
+        }.font(.headline)
     }
 }
 
-
-
-
-
-
-//struct GridView: View {
-//    var text: String
-//
-//    var body: some View {
-//        Text(text)
-//            .font(.subheadline)
-//    }
-//}
-
-//struct PDFGrid: View {
-//    @Query(sort: \BPDetails.timestamp) var allRecords: [BPDetails]
-//    @State var records = [String]()
-//    
-//    var body: some View {
-//        NavigationStack {
-//                // I have chosen to have 20 views per page
-//            ShareLink("Export Data", item: render(viewsPerPage: 20))
-//            ScrollView {
-//                LazyVGrid(columns: [GridItem()]) {
-//                    ForEach(records, id: \.self) { item in
-//                        GridView(text: item)
-//                    }
-//                }
-//            }
-//        }
-//        .onAppear {
-//                // Format records into printable content
-//            records = formatRecords(records: allRecords)
-//        }
-//    }
-//    
-//    func formatRecords(records: [BPDetails]) -> [String] {
-//            // Example: Format records into strings for printing
-//        return records.map { record in
-//            return "\(record.timestamp.formatted(date: .numeric, time: .shortened)) - BP: \(record.systalic)/\(record.distalic)"
-//        }
-//    }
-//    
-//    
-//    @MainActor func render(viewsPerPage: Int) -> URL {
-//            // Save it to our documents directory
-//        let url = URL.documentsDirectory.appending(path: "BPReport.pdf")
-//        
-//            // Tell SwiftUI our PDF should be of certain size
-//        var box = CGRect(x: 0, y: 0, width: 600, height: 1200)
-//        
-//            // Create the CGContext for our PDF pages
-//        guard let pdf = CGContext(url as CFURL, mediaBox: &box, nil) else {
-//            return url
-//        }
-//        
-//            // Calculate number of pages based on passed amount of viewsPerPage
-//            // you would like to have
-//        let numberOfPages = records.count / viewsPerPage
-//        
-//        var index = 0
-//        for _ in 0..<numberOfPages {
-//            
-//                // Start a new PDF page
-//            pdf.beginPDFPage(nil)
-//            
-//                // Render the header information
-//            let renderer = ImageRenderer(content: 
-//                                            VStack {
-//                Text("BP Report: 03/31/2024")
-//                Text("Data Range: 03/04/2024 - 03/31/2024")
-//            })
-//            renderer.render { size, context in
-//                
-//                    // Will place the view in the middle of pdf on x-axis
-//                let xTranslation = box.size.width / 2 - size.width / 2
-//                
-//                    // Spacing between the views on y-axis
-//                let spacing: CGFloat = 30
-//                
-//                    // TODO: - View starts printing from bottom, need to inverse Y position
-//                pdf.translateBy(
-//                    x: xTranslation - min(max(CGFloat(0) * xTranslation, 0), xTranslation),
-//                    y: size.height + spacing
-//                )
-//                    // Render the SwiftUI view data onto the page
-//                context(pdf)
-//                    // End the page and close the file
-//            }
-//            
-//                // Render necessary views
-//            for num in 0..<viewsPerPage {
-//                let renderer = ImageRenderer(content: GridView(text: records[index]))
-//                renderer.render { size, context in
-//                    
-//                        // Will place the view in the middle of pdf on x-axis
-//                    let xTranslation = box.size.width / 2 - size.width / 2
-//                    
-//                        // Spacing between the views on y-axis
-//                    let spacing: CGFloat = 30
-//                    
-//                        // TODO: - View starts printing from bottom, need to inverse Y position
-//                    pdf.translateBy(
-//                        x: xTranslation - min(max(CGFloat(num+1) * xTranslation, 0), xTranslation),
-//                        y: size.height + spacing
-//                    )
-//                        // Render the SwiftUI view data onto the page
-//                    context(pdf)
-//                        // End the page and close the file
-//                }
-//                index += 1
-//            }
-//            pdf.endPDFPage()
-//        }
-//        pdf.closePDF()
-//        return url
-//    }
-//}
+struct ShowReportSegment: View {
+    // @Query(sort: \BPDetails.timestamp) var allRecords: [BPDetails]
+    @Binding var startDate: Date
+    @Binding var endDate: Date
+    var segment : Int
+    var records : [String]
+    
+    var body: some View {
+        let recordsPerPage = 20
+        let recordCount = records.count
+        let pageCount = (Double (recordCount) / Double (recordsPerPage)).rounded(.up)
+        
+        let recordsInSegment = Int(pageCount-1) == segment ? (records.count - (segment * recordsPerPage)) : recordsPerPage
+        let hold=5
+        
+        ForEach (0..<recordsInSegment, id: \.self) { index in
+            let arrayIndex = index+(segment*recordsPerPage)
+            Text("\(records[arrayIndex])")
+                .font(.subheadline)
+        }
+    }
+}
