@@ -7,8 +7,6 @@
 
 import SwiftUI
 import SwiftData
-import PrintingKit
-import PDFKit
 
 public extension View {
     @MainActor
@@ -226,16 +224,13 @@ struct ShowReport: View {
     @Binding var showReport: Bool
     @Binding var startDate: Date
     @Binding var endDate: Date
-    @State var records = [String]()
-    
     
     var body: some View {
         ShowReportTitle(startDate: $startDate, endDate:$endDate)
         
-        let recordsPerPage = 25
+        let recordsPerPage = 20
         let recordCount = bpDetailResults.count
         let pageCount = (Double (recordCount) / Double (recordsPerPage)).rounded(.up)
-        
         
         ScrollView {
             ForEach(0..<Int(pageCount), id: \.self) { index in
@@ -243,37 +238,35 @@ struct ShowReport: View {
             }
         }
         
-        VStack {
-            HStack {
-                Button("Print") {
-                    let page1View = VStack {
-                        ShowReportTitle(startDate: $startDate, endDate:$endDate)
-                        ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:0, records: formatRecords(records: bpDetailResults))
-                    }.font(.subheadline)
-                    let page1Image = page1View.snapshot()!
-                    let page2View = VStack {
-                        ShowReportTitle(startDate: $startDate, endDate:$endDate)
-                        ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:1, records: formatRecords(records: bpDetailResults))
-                    }.font(.subheadline)
-                    let page2Image = page2View.snapshot()!
-                    
-                    DispatchQueue.main.async {
-                        let info = UIPrintInfo(dictionary: nil)
-                        info.outputType = .general
-                        info.jobName = "Standard Printer Job"
-                        let printView = UIPrintInteractionController.shared
-                        printView.printingItems = [page1Image, page2Image]
-                        printView.printInfo = info
-                        printView.present(animated: true)
-                    }
-                }
+        HStack {
+            Button("Print") {
+                let page1View = VStack {
+                    ShowReportTitle(startDate: $startDate, endDate:$endDate)
+                    ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:0, records: formatRecords(records: bpDetailResults))
+                }.font(.subheadline)
+                let page1Image = page1View.snapshot()!
+                let page2View = VStack {
+                    ShowReportTitle(startDate: $startDate, endDate:$endDate)
+                    ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:1, records: formatRecords(records: bpDetailResults))
+                }.font(.subheadline)
+                let page2Image = page2View.snapshot()!
                 
-                Button("Cancel") {
-                    showReport = false
+                DispatchQueue.main.async {
+                    let info = UIPrintInfo(dictionary: nil)
+                    info.outputType = .general
+                    info.jobName = "Standard Printer Job"
+                    let printView = UIPrintInteractionController.shared
+                    printView.printingItems = [page1Image, page2Image]
+                    printView.printInfo = info
+                    printView.present(animated: true)
                 }
-            }.padding(.horizontal, 50).padding(.vertical,20)
-        }
-        .font(.subheadline)
+            }
+            
+            Button("Cancel") {
+                showReport = false
+            }
+        }.padding(.horizontal, 50).padding(.vertical,20)
+            .font(.subheadline)
     }
     
     func formatRecords(records: [BPDetails]) -> [String] {
