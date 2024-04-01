@@ -308,6 +308,30 @@ struct PDFGrid: View {
                 // Start a new PDF page
             pdf.beginPDFPage(nil)
             
+                // Render the header information
+            let renderer = ImageRenderer(content: 
+                                            VStack {
+                Text("BP Report: 03/31/2024")
+                Text("Data Range: 03/04/2024 - 03/31/2024")
+            })
+            renderer.render { size, context in
+                
+                    // Will place the view in the middle of pdf on x-axis
+                let xTranslation = box.size.width / 2 - size.width / 2
+                
+                    // Spacing between the views on y-axis
+                let spacing: CGFloat = 30
+                
+                    // TODO: - View starts printing from bottom, need to inverse Y position
+                pdf.translateBy(
+                    x: xTranslation - min(max(CGFloat(0) * xTranslation, 0), xTranslation),
+                    y: size.height + spacing
+                )
+                    // Render the SwiftUI view data onto the page
+                context(pdf)
+                    // End the page and close the file
+            }
+            
                 // Render necessary views
             for num in 0..<viewsPerPage {
                 let renderer = ImageRenderer(content: GridView(text: records[index]))
@@ -321,7 +345,7 @@ struct PDFGrid: View {
                     
                         // TODO: - View starts printing from bottom, need to inverse Y position
                     pdf.translateBy(
-                        x: xTranslation - min(max(CGFloat(num) * xTranslation, 0), xTranslation),
+                        x: xTranslation - min(max(CGFloat(num+1) * xTranslation, 0), xTranslation),
                         y: size.height + spacing
                     )
                         // Render the SwiftUI view data onto the page
