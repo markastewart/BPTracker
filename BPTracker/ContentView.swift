@@ -353,14 +353,14 @@ struct PDFKitView: UIViewRepresentable {
 
 
 
-struct GridView: View {
-    var text: String
-
-    var body: some View {
-        Text(text)
-            .font(.subheadline)
-    }
-}
+//struct GridView: View {
+//    var text: String
+//
+//    var body: some View {
+//        Text(text)
+//            .font(.subheadline)
+//    }
+//}
 
 //struct PDFGrid: View {
 //    @Query(sort: \BPDetails.timestamp) var allRecords: [BPDetails]
