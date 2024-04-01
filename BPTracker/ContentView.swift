@@ -243,11 +243,13 @@ struct ShowReport: View {
                 let page1View = VStack {
                     ShowReportTitle(startDate: $startDate, endDate:$endDate)
                     ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:0, records: formatRecords(records: bpDetailResults))
+                    ShowReportFooter(currentPage: 1, totalPages: 2)
                 }.font(.subheadline)
                 let page1Image = page1View.snapshot()!
                 let page2View = VStack {
                     ShowReportTitle(startDate: $startDate, endDate:$endDate)
                     ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:1, records: formatRecords(records: bpDetailResults))
+                    ShowReportFooter(currentPage: 2, totalPages: 2)
                 }.font(.subheadline)
                 let page2Image = page2View.snapshot()!
                 
@@ -261,7 +263,7 @@ struct ShowReport: View {
                     printView.present(animated: true)
                 }
             }
-            
+            Spacer()
             Button("Cancel") {
                 showReport = false
             }
@@ -271,7 +273,7 @@ struct ShowReport: View {
     
     func formatRecords(records: [BPDetails]) -> [String] {
         return records.map { record in
-            return "\(record.timestamp.formatted(date: .numeric, time: .shortened)) - BP: \(record.systalic)/\(record.distalic)"
+            return "\(record.timestamp.formatted(date: .numeric, time: .shortened)): \(record.systalic)/\(record.distalic) mmHg"
         }
     }
 }
@@ -281,14 +283,14 @@ struct ShowReportTitle: View {
     
     var body: some View {
         VStack {
-            Text("Blood Pressure Results  - \(Date().formatted(date: .abbreviated, time: .omitted))")
-            Text("Results for \(startDate.formatted(date: .abbreviated, time: .omitted)) to \(endDate.formatted(date: .abbreviated, time: .omitted))")
-        }.font(.headline)
+            Text("Blood Pressure Results   \(Date().formatted(date: .abbreviated, time: .omitted))")
+            Text("Date range: \(startDate.formatted(date: .abbreviated, time: .omitted)) to \(endDate.formatted(date: .abbreviated, time: .omitted))")
+            Text("")
+        }.font(.system(size: 14))
     }
 }
 
 struct ShowReportSegment: View {
-    // @Query(sort: \BPDetails.timestamp) var allRecords: [BPDetails]
     @Binding var startDate: Date
     @Binding var endDate: Date
     var segment : Int
@@ -305,7 +307,17 @@ struct ShowReportSegment: View {
         ForEach (0..<recordsInSegment, id: \.self) { index in
             let arrayIndex = index+(segment*recordsPerPage)
             Text("\(records[arrayIndex])")
-                .font(.subheadline)
+                .font(.system(size: 14))
         }
+    }
+}
+
+struct ShowReportFooter: View {
+    var currentPage: Int
+    var totalPages: Int
+    
+    var body: some View {
+        Text("")
+        Text("Page \(currentPage) of \(totalPages)").font(.subheadline)
     }
 }
