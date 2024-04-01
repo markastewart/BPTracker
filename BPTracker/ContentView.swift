@@ -127,13 +127,16 @@ struct EnterBPInput: View {
             
             HStack {
                 DatePicker("Time of Reading", selection: $bpTimeStamp, displayedComponents:.hourAndMinute)
+                    .onAppear{
+                        UIDatePicker.appearance().minuteInterval = 15
+                    }
                 Spacer()
             }.padding(.horizontal, 20)
             
             HStack {
-                Text("Systalic:")
+                Text("Systolic:")
                 Picker("", selection: $systalicInput) {
-                    ForEach(90..<151) {
+                    ForEach(90..<166) {
                         Text("\($0)")
                     }
                 }
@@ -141,9 +144,9 @@ struct EnterBPInput: View {
             }.padding(.horizontal, 20)
             
             HStack {
-                Text("Diastalic:")
+                Text("Diastolic:")
                 Picker("", selection: $diastalicInput) {
-                    ForEach(70..<121) {
+                    ForEach(60..<121) {
                         Text("\($0)")
                     }
                 }
@@ -257,6 +260,8 @@ struct ShowReport: View {
                     let info = UIPrintInfo(dictionary: nil)
                     info.outputType = .general
                     info.jobName = "Standard Printer Job"
+                    info.duplex = .shortEdge
+                    info.orientation = .portrait
                     let printView = UIPrintInteractionController.shared
                     printView.printingItems = [page1Image, page2Image]
                     printView.printInfo = info
@@ -283,8 +288,9 @@ struct ShowReportTitle: View {
     
     var body: some View {
         VStack {
-            Text("Blood Pressure Results   \(Date().formatted(date: .abbreviated, time: .omitted))")
-            Text("Date range: \(startDate.formatted(date: .abbreviated, time: .omitted)) to \(endDate.formatted(date: .abbreviated, time: .omitted))")
+            Text("Blood Pressure Results  -  \(Date().formatted(date: .numeric, time: .omitted))").fontWeight(.bold)
+            Text("")
+            Text("Date range: (\(startDate.formatted(date: .numeric, time: .omitted))-\(endDate.formatted(date: .numeric, time: .omitted)))").fontWeight(/*@START_MENU_TOKEN@*/.bold/*@END_MENU_TOKEN@*/)
             Text("")
         }.font(.system(size: 14))
     }
@@ -307,6 +313,7 @@ struct ShowReportSegment: View {
             let arrayIndex = index+(segment*recordsPerPage)
             Text("\(records[arrayIndex])")
                 .font(.system(size: 14))
+            Divider()
         }
     }
 }
