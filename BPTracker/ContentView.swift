@@ -1,0 +1,468 @@
+//
+//  ContentView.swift
+//  BPTracker
+//
+//  Created by Mark A Stewart on 3/25/24.
+//
+
+import SwiftUI
+import SwiftData
+import PrintingKit
+import PDFKit
+
+public extension View {
+    @MainActor
+    func snapshot(scale: CGFloat? = nil) -> UIImage? {
+        let renderer = ImageRenderer(content: self)
+        renderer.scale = scale ?? UIScreen.main.scale
+        return renderer.uiImage
+    }
+}
+
+struct ContentView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
+    let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
+    @State var showEnterBPInput = false
+    @State var showResults = false
+    @State var isEditing = false
+    
+    var body: some View {
+        VStack {
+            HStack {
+                Text("BP Tracker").foregroundStyle(.black).fontWeight(.bold)
+                Image(systemName: "heart.fill").foregroundStyle(.red)
+            }
+            
+            NavigationSplitView {
+                if bpDetailResults.count == 0 {
+                    Text("No Readings").fontWeight(.bold)
+                } else {
+                    Text("Most Recent Readings").fontWeight(.bold)
+                }
+                
+                ScrollViewReader { scrollView in
+                    List {
+                        ForEach(bpDetailResults) { bpRecord in
+                            LazyVGrid(columns: grid2Member) {
+                                Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened)).font(.subheadline)
+                                Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
+                            }.id(bpRecord.id)
+                        }
+                        .onDelete(perform: deleteItems)
+                        .onChange (of: bpDetailResults.count) {
+                            let lastRecord = bpDetailResults.count - 1
+                            scrollView.scrollTo(bpDetailResults[lastRecord].id)
+                        }
+                        .onAppear (perform: {
+                            DispatchQueue.main.async() {
+                                scrollView.scrollTo(bpDetailResults[bpDetailResults.count - 1].id)
+                            }
+                        })
+                    }
+                    .frame(height: 530)
+                }
+                .toolbar {
+                    ToolbarItem {
+                        Button(action: { showEnterBPInput = true }) {
+                            Label("Add item", systemImage: "plus")
+                        }
+                        .popover(isPresented: $showEnterBPInput, content: {
+                            EnterBPInput(showEnterBPInput: $showEnterBPInput)
+                                .presentationCompactAdaptation(.popover)
+                        })
+                    }
+                    
+                    ToolbarItem {
+                        Button(action: { isEditing.toggle() }) {
+                            Image(systemName: isEditing ? "pencil.circle" : "pencil")
+                        }
+                    }
+                    
+                    ToolbarItem {
+                        Button(action: { showResults = true}) {
+                            Label("", systemImage: "doc.text")
+                        }
+                        .popover(isPresented: $showResults, content: {
+                            ShowResults(showResults: $showResults)
+                                .presentationCompactAdaptation(.popover)
+                        })
+                    }
+                }
+                .environment(\.editMode, .constant(isEditing ? .active : .inactive))
+            } detail: {
+                Text("Select an item")
+            }
+        }
+        .background(.gray.opacity(0.50))
+    }
+    
+    private func deleteItems(offsets: IndexSet) {
+        withAnimation {
+            for index in offsets {
+                modelContext.delete(bpDetailResults[index])
+            }
+        }
+    }
+}
+
+struct EnterBPInput: View {
+    @Environment(\.modelContext) private var modelContext
+    @Binding var showEnterBPInput: Bool
+    @State var bpTimeStamp = Date()
+    @State var systalicInput = 20
+    @State var diastalicInput = 10
+    var newItem = BPDetails()
+    
+    var body: some View {
+        HStack {
+            Spacer()
+            Text("Blood Pressure Input").font(.headline).padding(.vertical, 35)
+            Spacer()
+        }
+        
+        VStack {
+            HStack {
+                DatePicker("Date of Reading", selection: $bpTimeStamp, displayedComponents:.date)
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                DatePicker("Time of Reading", selection: $bpTimeStamp, displayedComponents:.hourAndMinute)
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                Text("Systalic:")
+                Picker("", selection: $systalicInput) {
+                    ForEach(90..<151) {
+                        Text("\($0)")
+                    }
+                }
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                Text("Diastalic:")
+                Picker("", selection: $diastalicInput) {
+                    ForEach(70..<121) {
+                        Text("\($0)")
+                    }
+                }
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                Button("Save") {
+                    newItem.timestamp = bpTimeStamp
+                    newItem.systalic = String(systalicInput+90)
+                    newItem.distalic = String(diastalicInput+70)
+                    modelContext.insert(newItem)
+                    showEnterBPInput = false
+                }
+                Spacer()
+                Button("Cancel") {
+                    showEnterBPInput = false
+                }
+            }.padding(.horizontal, 50).padding(.vertical,20)
+        }
+        .font(.subheadline)
+    }
+}
+
+
+struct ShowResults: View {
+    @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
+    @Binding var showResults: Bool
+    @State var bpStartTime = Date()
+    @State var bpEndTime = Date()
+    @State var showReport = false
+    
+    var body: some View {
+        HStack {
+            Spacer()
+            Text("Select Blood Pressure Results").font(.headline).padding(.vertical, 35)
+                .onAppear() {
+                    if let firstBPRec = bpDetailResults.first {
+                        bpStartTime = firstBPRec.timestamp
+                    }
+                    if let lastBPRec = bpDetailResults.last {
+                        bpEndTime = lastBPRec.timestamp
+                    }
+                }
+            Spacer()
+        }
+        
+        VStack {
+            HStack {
+                DatePicker("Start Date", selection: $bpStartTime, displayedComponents:.date)
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                DatePicker("End Date", selection: $bpEndTime, displayedComponents:.date)
+                Spacer()
+            }.padding(.horizontal, 20)
+            
+            HStack {
+                Button("Show Data") {
+                    showReport = true
+                }
+                .fullScreenCover(isPresented: $showReport, content: { ShowReport(showReport: $showReport) })
+                
+                Spacer()
+                Button("Cancel") {
+                    showResults = false
+                }
+            }.padding(.horizontal, 50).padding(.vertical,20)
+        }
+        .font(.subheadline)
+    }
+}
+
+struct ShowReport: View {
+    @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
+    let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
+    @Binding var showReport: Bool
+    @State var bpStartTime = Date()
+    @State var bpEndTime = Date()
+    
+    var body: some View {
+        HStack {
+            Spacer()
+            Text("Blood Pressure Results").font(.headline).padding(.vertical, 35)
+            Spacer()
+        }
+
+        PDFGrid()
+        
+        VStack {
+            HStack {
+                Button("Cancel") {
+                    showReport = false
+                }
+            }.padding(.horizontal, 50).padding(.vertical,20)
+        }
+        .font(.subheadline)
+    }
+}
+
+
+struct PDFGrid: View {
+    @Query(sort: \BPDetails.timestamp) var allRecords: [BPDetails]
+    @State var records = [String]()
+    
+        // Main UI
+    var body: some View {
+        Button("Save PDF") {
+            savePDF()
+        }
+        PDFKitView(pdfData: PDFDocument(data: generatePDF(records: records))!)
+            .onAppear {
+                    // Format records into printable content
+                records = formatRecords(records: allRecords)
+            }
+    }
+    
+    func formatRecords(records: [BPDetails]) -> [String] {
+            // Example: Format records into strings for printing
+        return records.map { record in
+            return "\(record.timestamp.formatted(date: .numeric, time: .shortened)) - BP: \(record.systalic)/\(record.distalic)"
+        }
+    }
+    
+        // Generating PDF
+    @MainActor
+    private func generatePDF(records: [String]) -> Data {
+        
+        let pdfRenderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 595, height: 842)) // A4 paper size
+        
+        let data = pdfRenderer.pdfData { context in
+            
+            context.beginPage()
+            
+            let attributes = [
+                NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: 16)
+            ]
+                // adding text to pdf
+var y=50
+            var text = "BP Report: 03/31/2024"
+            text.draw(at: CGPoint(x: 20, y: y), withAttributes: attributes)
+            text = "Data Range: 03/04/2024 - 03/31/2024"
+            y=y+20
+            text.draw(at: CGPoint(x: 20, y: y), withAttributes: attributes)
+            
+            let viewsPerPage = 20
+            let numberOfPages = records.count / viewsPerPage
+            var index = 0
+            for _ in 0..<numberOfPages {
+                for _ in 0..<viewsPerPage {
+                    text = records[index]
+                    y=y+20
+                    text.draw(at: CGPoint(x: 20, y: y), withAttributes: attributes)
+                    index += 1
+                }
+            }
+        }
+        return data
+    }
+    
+    
+    
+        // Saving PDF
+    @MainActor func savePDF() {
+        let fileName = "GeneratedPDF.pdf"
+        let pdfData = generatePDF(records: records)
+        
+        if let documentDirectories = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let documentURL = documentDirectories.appendingPathComponent(fileName)
+            do {
+                try pdfData.write(to: documentURL)
+                print("PDF saved at: \(documentURL)")
+            } catch {
+                print("Error saving PDF: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+}
+
+// PDF Viewer
+struct PDFKitView: UIViewRepresentable {
+    
+    let pdfDocument: PDFDocument
+    
+    init(pdfData pdfDoc: PDFDocument) {
+        self.pdfDocument = pdfDoc
+    }
+    
+    func makeUIView(context: Context) -> PDFView {
+        let pdfView = PDFView()
+        pdfView.document = pdfDocument
+        pdfView.autoScales = true
+        return pdfView
+    }
+    
+    func updateUIView(_ pdfView: PDFView, context: Context) {
+        pdfView.document = pdfDocument
+    }
+}
+
+
+
+
+
+
+struct GridView: View {
+    var text: String
+
+    var body: some View {
+        Text(text)
+            .font(.subheadline)
+    }
+}
+
+//struct PDFGrid: View {
+//    @Query(sort: \BPDetails.timestamp) var allRecords: [BPDetails]
+//    @State var records = [String]()
+//    
+//    var body: some View {
+//        NavigationStack {
+//                // I have chosen to have 20 views per page
+//            ShareLink("Export Data", item: render(viewsPerPage: 20))
+//            ScrollView {
+//                LazyVGrid(columns: [GridItem()]) {
+//                    ForEach(records, id: \.self) { item in
+//                        GridView(text: item)
+//                    }
+//                }
+//            }
+//        }
+//        .onAppear {
+//                // Format records into printable content
+//            records = formatRecords(records: allRecords)
+//        }
+//    }
+//    
+//    func formatRecords(records: [BPDetails]) -> [String] {
+//            // Example: Format records into strings for printing
+//        return records.map { record in
+//            return "\(record.timestamp.formatted(date: .numeric, time: .shortened)) - BP: \(record.systalic)/\(record.distalic)"
+//        }
+//    }
+//    
+//    
+//    @MainActor func render(viewsPerPage: Int) -> URL {
+//            // Save it to our documents directory
+//        let url = URL.documentsDirectory.appending(path: "BPReport.pdf")
+//        
+//            // Tell SwiftUI our PDF should be of certain size
+//        var box = CGRect(x: 0, y: 0, width: 600, height: 1200)
+//        
+//            // Create the CGContext for our PDF pages
+//        guard let pdf = CGContext(url as CFURL, mediaBox: &box, nil) else {
+//            return url
+//        }
+//        
+//            // Calculate number of pages based on passed amount of viewsPerPage
+//            // you would like to have
+//        let numberOfPages = records.count / viewsPerPage
+//        
+//        var index = 0
+//        for _ in 0..<numberOfPages {
+//            
+//                // Start a new PDF page
+//            pdf.beginPDFPage(nil)
+//            
+//                // Render the header information
+//            let renderer = ImageRenderer(content: 
+//                                            VStack {
+//                Text("BP Report: 03/31/2024")
+//                Text("Data Range: 03/04/2024 - 03/31/2024")
+//            })
+//            renderer.render { size, context in
+//                
+//                    // Will place the view in the middle of pdf on x-axis
+//                let xTranslation = box.size.width / 2 - size.width / 2
+//                
+//                    // Spacing between the views on y-axis
+//                let spacing: CGFloat = 30
+//                
+//                    // TODO: - View starts printing from bottom, need to inverse Y position
+//                pdf.translateBy(
+//                    x: xTranslation - min(max(CGFloat(0) * xTranslation, 0), xTranslation),
+//                    y: size.height + spacing
+//                )
+//                    // Render the SwiftUI view data onto the page
+//                context(pdf)
+//                    // End the page and close the file
+//            }
+//            
+//                // Render necessary views
+//            for num in 0..<viewsPerPage {
+//                let renderer = ImageRenderer(content: GridView(text: records[index]))
+//                renderer.render { size, context in
+//                    
+//                        // Will place the view in the middle of pdf on x-axis
+//                    let xTranslation = box.size.width / 2 - size.width / 2
+//                    
+//                        // Spacing between the views on y-axis
+//                    let spacing: CGFloat = 30
+//                    
+//                        // TODO: - View starts printing from bottom, need to inverse Y position
+//                    pdf.translateBy(
+//                        x: xTranslation - min(max(CGFloat(num+1) * xTranslation, 0), xTranslation),
+//                        y: size.height + spacing
+//                    )
+//                        // Render the SwiftUI view data onto the page
+//                    context(pdf)
+//                        // End the page and close the file
+//                }
+//                index += 1
+//            }
+//            pdf.endPDFPage()
+//        }
+//        pdf.closePDF()
+//        return url
+//    }
+//}
