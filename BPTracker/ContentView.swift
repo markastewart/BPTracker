@@ -158,6 +158,7 @@ struct EnterBPInput: View {
                     newItem.timestamp = bpTimeStamp
                     newItem.systalic = systalicInput+90
                     newItem.distalic = diastalicInput+70
+                    newItem.totalmmHg = newItem.systalic + newItem.distalic
                     modelContext.insert(newItem)
                     showEnterBPInput = false
                 }
