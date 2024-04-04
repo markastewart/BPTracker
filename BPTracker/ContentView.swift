@@ -247,15 +247,20 @@ struct ShowReport: View {
                 let page1View = VStack {
                     ShowReportTitle(startDate: $startDate, endDate:$endDate)
                     ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:0, records: formatRecords(records: bpDetailResults))
-                    ShowReportFooter(currentPage: 1, totalPages: 2)
+                    ShowReportFooter(currentPage: 1, totalPages: 3)
                 }.font(.subheadline)
                 let page1Image = page1View.snapshot()!
                 let page2View = VStack {
                     ShowReportTitle(startDate: $startDate, endDate:$endDate)
                     ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:1, records: formatRecords(records: bpDetailResults))
-                    ShowReportFooter(currentPage: 2, totalPages: 2)
+                    ShowReportFooter(currentPage: 2, totalPages: 3)
                 }.font(.subheadline)
                 let page2Image = page2View.snapshot()!
+                let page3View = VStack {
+                    ShowBPMaxMin(mmHgSorted: mmHgSorted)
+                    ShowReportFooter(currentPage: 3, totalPages: 3)
+                }.font(.subheadline)
+                let page3Image = page3View.snapshot()!
                 
                 DispatchQueue.main.async {
                     let info = UIPrintInfo(dictionary: nil)
@@ -264,7 +269,7 @@ struct ShowReport: View {
                     info.duplex = .shortEdge
                     info.orientation = .portrait
                     let printView = UIPrintInteractionController.shared
-                    printView.printingItems = [page1Image, page2Image]
+                    printView.printingItems = [page1Image, page2Image, page3Image]
                     printView.printInfo = info
                     printView.present(animated: true)
                 }
