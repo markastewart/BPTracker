@@ -35,6 +35,9 @@ struct ContentView: View {
             NavigationSplitView {
                 if bpDetailResults.count == 0 {
                     Text("No Readings").fontWeight(.bold)
+                        .onAppear {
+                            BPDetails().loadRecs(context: modelContext)
+                        }
                 } else {
                     Text("Most Recent Readings").fontWeight(.bold)
                 }
@@ -110,7 +113,6 @@ struct EnterBPInput: View {
     @State var bpTimeStamp = Date()
     @State var systalicInput = 20
     @State var diastalicInput = 10
-    var newItem = BPDetails()
     
     var body: some View {
         HStack {
@@ -155,11 +157,7 @@ struct EnterBPInput: View {
             
             HStack {
                 Button("Save") {
-                    newItem.timestamp = bpTimeStamp
-                    newItem.systalic = systalicInput+90
-                    newItem.distalic = diastalicInput+70
-                    newItem.totalmmHg = newItem.systalic + newItem.distalic
-                    modelContext.insert(newItem)
+                    BPDetails().saveBPDetails(context: modelContext, bpTimeStamp: bpTimeStamp, systolic: systalicInput, diastolic: diastalicInput)
                     showEnterBPInput = false
                 }
                 Spacer()
@@ -225,6 +223,7 @@ struct ShowResults: View {
 
 struct ShowReport: View {
     @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
+    @Query(sort: \BPDetails.totalmmHg) var mmHgSorted: [BPDetails]
     @Binding var showReport: Bool
     @Binding var startDate: Date
     @Binding var endDate: Date
@@ -240,6 +239,7 @@ struct ShowReport: View {
             ForEach(0..<Int(pageCount), id: \.self) { index in
                 ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:index, records: formatRecords(records: bpDetailResults))
             }
+            ShowBPMaxMin(mmHgSorted: mmHgSorted)
         }
         
         HStack {
@@ -326,5 +326,36 @@ struct ShowReportFooter: View {
     var body: some View {
         Text("")
         Text("Page \(currentPage) of \(totalPages)").font(.subheadline)
+    }
+}
+
+struct ShowBPMaxMin: View {
+    var mmHgSorted: [BPDetails]
+    let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
+    
+    var body: some View {
+        VStack {
+            Text("Ten highest BP readings").fontWeight(.bold)
+            let firstHighIndex = mmHgSorted.count-10
+            
+            ForEach(Array(mmHgSorted[firstHighIndex..<firstHighIndex+10].reversed()), id: \.self) { bpRecord in
+                LazyVGrid(columns: grid2Member) {
+                    Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened)).font(.subheadline)
+                    Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
+                }.id(bpRecord.id)
+            }
+        }.font(.subheadline).padding(.top, 30)
+        
+        VStack {
+            Text("Ten lowest BP readings").fontWeight(.bold)
+            let firstHighIndex = 0
+            
+            ForEach(Array(mmHgSorted[firstHighIndex..<firstHighIndex+10]), id: \.self) { bpRecord in
+                LazyVGrid(columns: grid2Member) {
+                    Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened)).font(.subheadline)
+                    Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
+                }.id(bpRecord.id)
+            }
+        }.font(.subheadline).padding(.top, 20)
     }
 }
