@@ -7,7 +7,7 @@
 
 import SwiftUI
 import SwiftData
-import UIKit
+import TPPDF
 
 public extension View {
     @MainActor
@@ -252,8 +252,7 @@ struct ShowReport: View {
         
         HStack {
             Button {
-                //printDocumentView(buildPrintView())
-                ShareLink("Export PDF", item: render())
+                render()
             } label: {
                 Text("Print")
                 Image(systemName: "printer")
@@ -286,69 +285,72 @@ struct ShowReport: View {
     
     
     @MainActor func render() -> URL {
-            // 1: Render Hello World with some modifiers
-        let renderer = ImageRenderer(content:
-                                        buildPrintView())
+        let page1Content = AnyView (VStack {
+            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: 1, totalPages: 3)
+            ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:0, records: formatRecords(records: bpDetailResults))
+        })
         
-            // 2: Save it to our documents directory
-        let url = URL.documentsDirectory.appending(path: "output.pdf")
+        let page2Content = AnyView (VStack {
+            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: 2, totalPages: 3)
+            ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:1, records: formatRecords(records: bpDetailResults))
+        })
         
-            // 3: Start the rendering process
-        renderer.render { size, context in
-                // 4: Tell SwiftUI our PDF should be the same size as the views we're rendering
-            var box = CGRect(x: 0, y: 0, width: size.width, height: size.height)
+        let page3Content = AnyView (VStack {
+            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: 3, totalPages: 3)
+            ShowBPMaxMin(mmHgSorted: mmHgSorted)
+        })
+        
+        let document1 = PDFDocument(format: .a4)
+        let p1image = page1Content.snapshotForPrint()
+        var imageElement = PDFImage(image: p1image!)
+        document1.add(image: imageElement)
+        
+        let document2 = PDFDocument(format: .a4)
+        let p2image = page2Content.snapshotForPrint()
+        imageElement = PDFImage(image: p2image!)
+        document2.add(image: imageElement)
+        
+        let document3 = PDFDocument(format: .a4)
+        let p3image = page3Content.snapshotForPrint()
+        imageElement = PDFImage(image: p3image!)
+        document3.add(image: imageElement)
+        let generator = PDFMultiDocumentGenerator(documents: [document1, document2, document3])
+        return (try? generator.generateURL(filename: "Example.pdf"))!
+    }
+        
+        
+        @MainActor
+        func printDocumentView(_ printableView: some View) {
+                // Create image for printing
+            let imageForPrinting = printableView.snapshotForPrint()!
             
-                // 5: Create the CGContext for our PDF pages
-            guard let pdf = CGContext(url as CFURL, mediaBox: &box, nil) else {
-                return
+                // Parse image into three pages by successively cropping the printable image
+            var pageImages : [UIImage] = []
+            let documentHeight = imageForPrinting.size.height
+            let pageHeight = 735.0 // was 1201 // May need to adjust through trial and error if size of document changes.
+            
+            var yOffset = 0.0
+            
+            while yOffset < documentHeight {
+                let sourceImage = imageForPrinting.cgImage
+                let cropRect = CGRect(x: 0, y: yOffset, width: imageForPrinting.size.width, height: pageHeight)
+                let croppedImage = sourceImage?.cropping(to: cropRect)
+                let pageImage = UIImage(cgImage: croppedImage!)
+                pageImages.append(pageImage)
+                yOffset += pageHeight
             }
             
-                // 6: Start a new PDF page
-            pdf.beginPDFPage(nil)
+                // Setup for printing
+            let info = UIPrintInfo(dictionary: nil)
+            info.outputType = .general
+            info.jobName = "Standard Printer Job"
+            let printView = UIPrintInteractionController.shared
+            printView.printingItems = pageImages
+            printView.printInfo = info
             
-                // 7: Render the SwiftUI view data onto the page
-            context(pdf)
-            
-                // 8: End the page and close the file
-            pdf.endPDFPage()
-            pdf.closePDF()
+                // Print!
+            printView.present(animated: true)
         }
-        return url
-    }
-
-    
-    @MainActor
-    func printDocumentView(_ printableView: some View) {
-            // Create image for printing
-        let imageForPrinting = printableView.snapshotForPrint()!
-        
-            // Parse image into three pages by successively cropping the printable image
-        var pageImages : [UIImage] = []
-        let documentHeight = imageForPrinting.size.height
-        let pageHeight = 735.0 // was 1201 // May need to adjust through trial and error if size of document changes.
-        
-        var yOffset = 0.0
-        
-        while yOffset < documentHeight {
-            let sourceImage = imageForPrinting.cgImage
-            let cropRect = CGRect(x: 0, y: yOffset, width: imageForPrinting.size.width, height: pageHeight)
-            let croppedImage = sourceImage?.cropping(to: cropRect)
-            let pageImage = UIImage(cgImage: croppedImage!)
-            pageImages.append(pageImage)
-            yOffset += pageHeight
-        }
-        
-            // Setup for printing
-        let info = UIPrintInfo(dictionary: nil)
-        info.outputType = .general
-        info.jobName = "Standard Printer Job"
-        let printView = UIPrintInteractionController.shared
-        printView.printingItems = pageImages
-        printView.printInfo = info
-        
-            // Print!
-        printView.present(animated: true)
-    }
     
     func formatRecords(records: [BPDetails]) -> [String] {
         return records.map { record in
@@ -414,28 +416,34 @@ struct ShowBPMaxMin: View {
     let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
     
     var body: some View {
-        VStack {
-            Text("Ten highest BP readings").fontWeight(.bold)
-            let firstHighIndex = mmHgSorted.count-10
+        if mmHgSorted.count >= 20 {
+            VStack {
+                Text("Ten highest BP readings").fontWeight(.bold)
+                let firstHighIndex = mmHgSorted.count-10
+                
+                ForEach(Array(mmHgSorted[firstHighIndex..<firstHighIndex+10].reversed()), id: \.self) { bpRecord in
+                    LazyVGrid(columns: grid2Member) {
+                        Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened)).font(.subheadline)
+                        Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
+                    }.id(bpRecord.id)
+                }
+            }.font(.subheadline).padding(.top, 15)
             
-            ForEach(Array(mmHgSorted[firstHighIndex..<firstHighIndex+10].reversed()), id: \.self) { bpRecord in
-                LazyVGrid(columns: grid2Member) {
-                    Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened)).font(.subheadline)
-                    Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
-                }.id(bpRecord.id)
-            }
-        }.font(.subheadline).padding(.top, 15)
-        
-        VStack {
-            Text("Ten lowest BP readings").fontWeight(.bold)
-            let firstHighIndex = 0
-            
-            ForEach(Array(mmHgSorted[firstHighIndex..<firstHighIndex+10]), id: \.self) { bpRecord in
-                LazyVGrid(columns: grid2Member) {
-                    Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened)).font(.subheadline)
-                    Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
-                }.id(bpRecord.id)
-            }
-        }.font(.subheadline).padding(.vertical, 15)
+            VStack {
+                Text("Ten lowest BP readings").fontWeight(.bold)
+                let firstHighIndex = 0
+                
+                ForEach(Array(mmHgSorted[firstHighIndex..<firstHighIndex+10]), id: \.self) { bpRecord in
+                    LazyVGrid(columns: grid2Member) {
+                        Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened)).font(.subheadline)
+                        Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
+                    }.id(bpRecord.id)
+                }
+            }.font(.subheadline).padding(.vertical, 15)
+        } else {
+            Text("Insufficent number of readings to report ten highest and lowest readings")
+                .padding(.top, 20)
+                .fontWeight(.bold)
+        }
     }
 }
