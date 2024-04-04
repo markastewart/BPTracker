@@ -10,10 +10,17 @@ import SwiftData
 
 public extension View {
     @MainActor
-    func snapshot(scale: CGFloat? = nil) -> UIImage? {
+    func snapshotForPrint(scale: CGFloat? = nil) -> UIImage? {
         let renderer = ImageRenderer(content: self)
-        renderer.scale = scale ?? UIScreen.main.scale
-        return renderer.uiImage
+        renderer.scale = 1.0
+        
+        guard let jpegData = renderer.uiImage?.jpegData(compressionQuality: 0.1),
+              let dp = CGDataProvider(data: jpegData as CFData),
+              let cgImage = CGImage(jpegDataProviderSource: dp, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
+        else {
+            exit(1)
+        }
+        return UIImage(cgImage: cgImage)
     }
 }
 
@@ -243,43 +250,69 @@ struct ShowReport: View {
         }
         
         HStack {
-            Button("Print") {
-                let page1View = VStack {
-                    ShowReportTitle(startDate: $startDate, endDate:$endDate)
-                    ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:0, records: formatRecords(records: bpDetailResults))
-                    ShowReportFooter(currentPage: 1, totalPages: 3)
-                }.font(.subheadline)
-                let page1Image = page1View.snapshot()!
-                let page2View = VStack {
-                    ShowReportTitle(startDate: $startDate, endDate:$endDate)
-                    ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:1, records: formatRecords(records: bpDetailResults))
-                    ShowReportFooter(currentPage: 2, totalPages: 3)
-                }.font(.subheadline)
-                let page2Image = page2View.snapshot()!
-                let page3View = VStack {
-                    ShowBPMaxMin(mmHgSorted: mmHgSorted)
-                    ShowReportFooter(currentPage: 3, totalPages: 3)
-                }.font(.subheadline)
-                let page3Image = page3View.snapshot()!
-                
-                DispatchQueue.main.async {
-                    let info = UIPrintInfo(dictionary: nil)
-                    info.outputType = .general
-                    info.jobName = "Standard Printer Job"
-                    info.duplex = .shortEdge
-                    info.orientation = .portrait
-                    let printView = UIPrintInteractionController.shared
-                    printView.printingItems = [page1Image, page2Image, page3Image]
-                    printView.printInfo = info
-                    printView.present(animated: true)
-                }
+            Button {
+                printDocumentView(buildPrintView())
+            } label: {
+                Text("Print")
+                Image(systemName: "printer")
             }
+            .buttonStyle(BorderedButtonStyle())
+            
             Spacer()
             Button("Cancel") {
                 showReport = false
             }
         }.padding(.horizontal, 50).padding(.vertical,20)
             .font(.subheadline)
+    }
+    
+    func buildPrintView() -> some View {
+        let printableView = VStack {
+            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: 1, totalPages: 3)
+            ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:0, records: formatRecords(records: bpDetailResults))
+            Divider()
+            
+            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: 2, totalPages: 3)
+            ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:1, records: formatRecords(records: bpDetailResults))
+            Divider()
+            
+            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: 3, totalPages: 3)
+            ShowBPMaxMin(mmHgSorted: mmHgSorted)
+        }
+        return printableView
+    }
+    
+    @MainActor
+    func printDocumentView(_ printableView: some View) {
+            // Create image for printing
+        let imageForPrinting = printableView.snapshotForPrint()!
+        
+            // Parse image into three pages by successively cropping the printable image
+        var pageImages : [UIImage] = []
+        let documentHeight = imageForPrinting.size.height
+        let pageHeight = 735.0 // was 1201 // May need to adjust through trial and error if size of document changes.
+        
+        var yOffset = 0.0
+        
+        while yOffset < documentHeight {
+            let sourceImage = imageForPrinting.cgImage
+            let cropRect = CGRect(x: 0, y: yOffset, width: imageForPrinting.size.width, height: pageHeight)
+            let croppedImage = sourceImage?.cropping(to: cropRect)
+            let pageImage = UIImage(cgImage: croppedImage!)
+            pageImages.append(pageImage)
+            yOffset += pageHeight
+        }
+        
+            // Setup for printing
+        let info = UIPrintInfo(dictionary: nil)
+        info.outputType = .general
+        info.jobName = "Standard Printer Job"
+        let printView = UIPrintInteractionController.shared
+        printView.printingItems = pageImages
+        printView.printInfo = info
+        
+            // Print!
+        printView.present(animated: true)
     }
     
     func formatRecords(records: [BPDetails]) -> [String] {
@@ -291,13 +324,20 @@ struct ShowReport: View {
 struct ShowReportTitle: View {
     @Binding var startDate: Date
     @Binding var endDate: Date
+    var currentPage = 0
+    var totalPages = 0
     
     var body: some View {
         VStack {
-            Text("Blood Pressure Results  -  \(Date().formatted(date: .numeric, time: .omitted))").fontWeight(.bold)
-            Text("")
-            Text("Date range: (\(startDate.formatted(date: .numeric, time: .omitted))-\(endDate.formatted(date: .numeric, time: .omitted)))").fontWeight(/*@START_MENU_TOKEN@*/.bold/*@END_MENU_TOKEN@*/)
-            Text("")
+            HStack {
+                Text("Blood Pressure Results  -  \(Date().formatted(date: .numeric, time: .omitted))").fontWeight(.bold)
+                if currentPage != 0 {
+                    Text(", Page \(currentPage) of \(totalPages)").fontWeight(.bold)
+                }
+            }.padding(.bottom, 20)
+            Text("Date range: (\(startDate.formatted(date: .numeric, time: .omitted))-\(endDate.formatted(date: .numeric, time: .omitted)))")
+                .fontWeight(/*@START_MENU_TOKEN@*/.bold/*@END_MENU_TOKEN@*/)
+                .padding(.bottom, 20)
         }.font(.system(size: 14))
     }
 }
@@ -349,7 +389,7 @@ struct ShowBPMaxMin: View {
                     Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
                 }.id(bpRecord.id)
             }
-        }.font(.subheadline).padding(.top, 30)
+        }.font(.subheadline).padding(.top, 15)
         
         VStack {
             Text("Ten lowest BP readings").fontWeight(.bold)
@@ -361,6 +401,6 @@ struct ShowBPMaxMin: View {
                     Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
                 }.id(bpRecord.id)
             }
-        }.font(.subheadline).padding(.top, 20)
+        }.font(.subheadline).padding(.vertical, 15)
     }
 }
