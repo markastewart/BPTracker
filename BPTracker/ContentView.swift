@@ -44,9 +44,9 @@ struct ContentView: View {
             NavigationSplitView {
                 if bpDetailResults.count == 0 {
                     Text("No Readings").fontWeight(.bold)
-//                        .onAppear {
-//                            BPDetails().loadRecs(context: modelContext)
-//                        }
+                        .onAppear {
+                            BPDetails().loadRecs(context: modelContext)
+                        }
                 } else {
                     Text("Most Recent Readings").fontWeight(.bold)
                 }

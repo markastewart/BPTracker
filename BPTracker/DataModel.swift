@@ -46,7 +46,7 @@ final class BPDetails {
             let bpTimeStamp = calendar.date(from: dateComponents)
             let systalic = Int.random(in: 0..<60)
             let distalic = Int.random(in: 0..<50)
-            saveBPDetails(context:context, bpTimeStamp:bpTimeStamp!, systolic:systalic, diastolic:distalic)
+//            saveBPDetails(context:context, bpTimeStamp:bpTimeStamp!, systolic:systalic, diastolic:distalic)
         }
     }
 }
