@@ -28,7 +28,7 @@ final class BPDetails {
         let newItem = BPDetails()
         newItem.timestamp = bpTimeStamp
         newItem.systalic = systolic+90
-        newItem.distalic = diastolic+70
+        newItem.distalic = diastolic+60
         newItem.totalmmHg = newItem.systalic + newItem.distalic
         context.insert(newItem)
     }
