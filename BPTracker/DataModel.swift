@@ -27,8 +27,8 @@ final class BPDetails {
     func saveBPDetails(context:ModelContext, bpTimeStamp:Date, systolic:Int, diastolic:Int) {
         let newItem = BPDetails()
         newItem.timestamp = bpTimeStamp
-        newItem.systalic = systolic+90
-        newItem.distalic = diastolic+60
+        newItem.systalic = systolic
+        newItem.distalic = diastolic
         newItem.totalmmHg = newItem.systalic + newItem.distalic
         context.insert(newItem)
     }
