@@ -8,6 +8,7 @@
 import SwiftUI
 import SwiftData
 import TPPDF
+import PDFKit
 
 public extension View {
     @MainActor
@@ -237,18 +238,8 @@ struct ShowReport: View {
     @Binding var endDate: Date
     
     var body: some View {
-        ShowReportTitle(startDate: $startDate, endDate:$endDate)
-        
-        let recordsPerPage = 20
-        let recordCount = bpDetailResults.count
-        let pageCount = (Double (recordCount) / Double (recordsPerPage)).rounded(.up)
-        
-        ScrollView {
-            ForEach(0..<Int(pageCount), id: \.self) { index in
-                ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:index, records: formatRecords(records: bpDetailResults))
-            }
-            ShowBPMaxMin(mmHgSorted: mmHgSorted)
-        }
+        let url = render()
+        PDFKitView(url:  url)
         
         HStack {
             Button {
@@ -266,23 +257,6 @@ struct ShowReport: View {
         }.padding(.horizontal, 50).padding(.vertical,20)
             .font(.subheadline)
     }
-    
-    func buildPrintView() -> some View {
-        let printableView = VStack {
-            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: 1, totalPages: 3)
-            ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:0, records: formatRecords(records: bpDetailResults))
-            Divider()
-            
-            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: 2, totalPages: 3)
-            ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:1, records: formatRecords(records: bpDetailResults))
-            Divider()
-            
-            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: 3, totalPages: 3)
-            ShowBPMaxMin(mmHgSorted: mmHgSorted)
-        }
-        return printableView
-    }
-    
     
     @MainActor func render() -> URL {
         let page1Content = AnyView (VStack {
@@ -445,5 +419,21 @@ struct ShowBPMaxMin: View {
                 .padding(.top, 20)
                 .fontWeight(.bold)
         }
+    }
+}
+
+struct PDFKitView: UIViewRepresentable {
+    var url: URL
+    
+    func makeUIView(context: Context) -> PDFView {
+        let pdfView = PDFView()
+
+        pdfView.document = PDFDocument(url: self.url)
+
+        pdfView.autoScales = false
+        return pdfView
+    }
+    
+    func updateUIView(_ pdfView: PDFView, context: Context) {
     }
 }
