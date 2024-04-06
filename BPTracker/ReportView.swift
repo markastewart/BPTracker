@@ -84,6 +84,12 @@ struct ShowReport: View {
     @Binding var startDate: Date
     @Binding var endDate: Date
     
+    var filteredDetails: [BPDetails] {
+        return bpDetailResults.compactMap { detailRec in
+            return detailRec.timestamp >= startDate && detailRec.timestamp <= endDate ? detailRec : nil
+        }
+    }
+    
     var body: some View {
         let url = render()
         PDFKitView(url: url)
@@ -111,12 +117,12 @@ struct ShowReport: View {
     @MainActor func render() -> URL {
         let page1Content = AnyView (VStack {
             ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: 1, totalPages: 3)
-            ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:0, records: formatRecords(records: bpDetailResults))
+            ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:0, records: formatRecords(records: filteredDetails))
         })
         
         let page2Content = AnyView (VStack {
             ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: 2, totalPages: 3)
-            ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:1, records: formatRecords(records: bpDetailResults))
+            ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:1, records: formatRecords(records: filteredDetails))
         })
         
         let page3Content = AnyView (VStack {
