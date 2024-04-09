@@ -97,7 +97,7 @@ struct ShowReport: View {
             .onAppear {
                 print("URL = \(url)")
             }
-    
+        
         HStack {
             Button {
                 try? Printer().print(PrintItem.pdfFile(at: url))
@@ -116,72 +116,42 @@ struct ShowReport: View {
     }
     
     @MainActor func render() -> URL {
-        let page1Content = AnyView (VStack {
-            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: 1, totalPages: 3)
-            ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:0, records: formatRecords(records: filteredDetails))
-        })
+        var ourDocs : [TPPDF.PDFDocument] = []
+        let recordsPerPage = 20
+        let recordCount = filteredDetails.count
+        let pageCount = Int((Double (recordCount) / Double (recordsPerPage)).rounded(.up))
+        var currentIndex = 0
         
-        let page2Content = AnyView (VStack {
-            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: 2, totalPages: 3)
-            ShowReportSegment(startDate: $startDate, endDate:$endDate, segment:1, records: formatRecords(records: filteredDetails))
-        })
+        for currentPage in 0..<pageCount {
+            let recordsInPage = (pageCount-1) == currentPage ? (filteredDetails.count - (currentPage * recordsPerPage)) : recordsPerPage
+            currentIndex = currentPage == 0 ? 0 : currentIndex+recordsPerPage
+            
+            let pageContent = AnyView (VStack {
+                ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: currentPage+1, totalPages: pageCount+1)
+                ShowReportSegment(startIndex: currentIndex, recordsToReport: recordsInPage, records: formatRecords(records: filteredDetails))
+                ShowReportFooter(currentPage: currentPage+1, totalPages: pageCount+1)
+            })
+            let document = PDFDocument(format: .a4)
+            let image = pageContent.snapshotForPrint()
+            let imageElement = PDFImage(image: image!)
+            document.add(image: imageElement)
+            ourDocs.append(document)
+        }
         
-        let page3Content = AnyView (VStack {
-            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: 3, totalPages: 3)
+        let pageContent = AnyView (VStack {
+            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: pageCount+1, totalPages: pageCount+1)
             ShowBPMaxMin(mmHgSorted: mmHgSorted)
+            ShowReportFooter(currentPage: pageCount+1, totalPages: pageCount+1)
         })
+        let document = PDFDocument(format: .a4)
+        let image = pageContent.snapshotForPrint()
+        let imageElement = PDFImage(image: image!)
+        document.add(image: imageElement)
+        ourDocs.append(document)
         
-        let document1 = PDFDocument(format: .a4)
-        let p1image = page1Content.snapshotForPrint()
-        var imageElement = PDFImage(image: p1image!)
-        document1.add(image: imageElement)
-        
-        let document2 = PDFDocument(format: .a4)
-        let p2image = page2Content.snapshotForPrint()
-        imageElement = PDFImage(image: p2image!)
-        document2.add(image: imageElement)
-        
-        let document3 = PDFDocument(format: .a4)
-        let p3image = page3Content.snapshotForPrint()
-        imageElement = PDFImage(image: p3image!)
-        document3.add(image: imageElement)
-        let generator = PDFMultiDocumentGenerator(documents: [document1, document2, document3])
+        let generator = PDFMultiDocumentGenerator(documents: ourDocs)
         return (try? generator.generateURL(filename: "BPResults.pdf"))!
     }
-        
-        
-        @MainActor
-        func printDocumentView(_ printableView: some View) {
-                // Create image for printing
-            let imageForPrinting = printableView.snapshotForPrint()!
-            
-                // Parse image into three pages by successively cropping the printable image
-            var pageImages : [UIImage] = []
-            let documentHeight = imageForPrinting.size.height
-            let pageHeight = 735.0 // was 1201 // May need to adjust through trial and error if size of document changes.
-            
-            var yOffset = 0.0
-            
-            while yOffset < documentHeight {
-                let sourceImage = imageForPrinting.cgImage
-                let cropRect = CGRect(x: 0, y: yOffset, width: imageForPrinting.size.width, height: pageHeight)
-                let croppedImage = sourceImage?.cropping(to: cropRect)
-                let pageImage = UIImage(cgImage: croppedImage!)
-                pageImages.append(pageImage)
-                yOffset += pageHeight
-            }
-            
-                // Setup for printing
-            let info = UIPrintInfo(dictionary: nil)
-            info.outputType = .general
-            info.jobName = "Standard Printer Job"
-            let printView = UIPrintInteractionController.shared
-            printView.printingItems = pageImages
-            printView.printInfo = info
-            
-                // Print!
-            printView.present(animated: true)
-        }
     
     func formatRecords(records: [BPDetails]) -> [String] {
         return records.map { record in
@@ -197,35 +167,22 @@ struct ShowReportTitle: View {
     
     var body: some View {
         VStack {
-            HStack {
-                Text("Blood Pressure Results  -  \(Date().formatted(date: .numeric, time: .omitted))").fontWeight(.bold)
-                if currentPage != 0 {
-                    Text(", Page \(currentPage) of \(totalPages)").fontWeight(.bold)
-                }
-            }.padding(.bottom, 20)
+            Text("Blood Pressure Results  -  \(Date().formatted(date: .numeric, time: .omitted))")
             Text("Date range: (\(startDate.formatted(date: .numeric, time: .omitted))-\(endDate.formatted(date: .numeric, time: .omitted)))")
-                .fontWeight(/*@START_MENU_TOKEN@*/.bold/*@END_MENU_TOKEN@*/)
-                .padding(.bottom, 20)
-        }.font(.system(size: 14))
+        }
+        .font(.system(size: 14))
+        .fontWeight(.bold).padding(.bottom, 20)
     }
 }
 
 struct ShowReportSegment: View {
-    @Binding var startDate: Date
-    @Binding var endDate: Date
-    var segment : Int
+    var startIndex : Int
+    var recordsToReport : Int
     var records : [String]
     
     var body: some View {
-        let recordsPerPage = 20
-        let recordCount = records.count
-        let pageCount = (Double (recordCount) / Double (recordsPerPage)).rounded(.up)
-        
-        let recordsInSegment = Int(pageCount-1) == segment ? (records.count - (segment * recordsPerPage)) : recordsPerPage
-        
-        ForEach (0..<recordsInSegment, id: \.self) { index in
-            let arrayIndex = index+(segment*recordsPerPage)
-            Text("\(records[arrayIndex])")
+        ForEach (0..<recordsToReport, id: \.self) { nextPageIndex in
+            Text("\(records[startIndex+nextPageIndex])")
                 .font(.system(size: 14))
             Divider()
         }
@@ -284,9 +241,7 @@ struct PDFKitView: UIViewRepresentable {
     
     func makeUIView(context: Context) -> PDFView {
         let pdfView = PDFView()
-
         pdfView.document = PDFDocument(url: self.url)
-
         pdfView.autoScales = false
         return pdfView
     }
