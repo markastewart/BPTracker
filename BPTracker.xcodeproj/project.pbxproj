@@ -15,6 +15,7 @@
 		56C037D92BC0970000B04685 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56C037D82BC096FF00B04685 /* HomeView.swift */; };
 		56C037DB2BC0981200B04685 /* EnterInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56C037DA2BC0981200B04685 /* EnterInputView.swift */; };
 		56C037DF2BC0992F00B04685 /* ReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56C037DE2BC0992F00B04685 /* ReportView.swift */; };
+		56C037E22BC5CCAD00B04685 /* PrintingKit in Frameworks */ = {isa = PBXBuildFile; productRef = 56C037E12BC5CCAD00B04685 /* PrintingKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				56C037E22BC5CCAD00B04685 /* PrintingKit in Frameworks */,
 				56C037D72BBE57E800B04685 /* TPPDF in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -98,6 +100,7 @@
 			name = BPTracker;
 			packageProductDependencies = (
 				56C037D62BBE57E800B04685 /* TPPDF */,
+				56C037E12BC5CCAD00B04685 /* PrintingKit */,
 			);
 			productName = BPTracker;
 			productReference = 560A1F822BB23FD30065E280 /* BPTracker.app */;
@@ -129,6 +132,7 @@
 			mainGroup = 560A1F792BB23FD30065E280;
 			packageReferences = (
 				56C037D52BBE57E700B04685 /* XCRemoteSwiftPackageReference "TPPDF" */,
+				56C037E02BC5CCAC00B04685 /* XCRemoteSwiftPackageReference "PrintingKit" */,
 			);
 			productRefGroup = 560A1F832BB23FD30065E280 /* Products */;
 			projectDirPath = "";
@@ -387,6 +391,14 @@
 				minimumVersion = 2.4.1;
 			};
 		};
+		56C037E02BC5CCAC00B04685 /* XCRemoteSwiftPackageReference "PrintingKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/danielsaidi/PrintingKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.5.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -394,6 +406,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 56C037D52BBE57E700B04685 /* XCRemoteSwiftPackageReference "TPPDF" */;
 			productName = TPPDF;
+		};
+		56C037E12BC5CCAD00B04685 /* PrintingKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 56C037E02BC5CCAC00B04685 /* XCRemoteSwiftPackageReference "PrintingKit" */;
+			productName = PrintingKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

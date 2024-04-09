@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 import TPPDF
 import PDFKit
+import PrintingKit
 
 public extension View {
     @MainActor
@@ -96,10 +97,10 @@ struct ShowReport: View {
             .onAppear {
                 print("URL = \(url)")
             }
-        
+    
         HStack {
             Button {
-                render()
+                try? Printer().print(PrintItem.pdfFile(at: url))
             } label: {
                 Text("Print")
                 Image(systemName: "printer")
