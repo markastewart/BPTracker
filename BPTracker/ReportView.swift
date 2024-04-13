@@ -27,6 +27,13 @@ public extension View {
     }
 }
 
+extension Array where Element: Hashable {
+    func distinct() -> Array<Element> {
+        var set = Set<Element>()
+        return filter { set.insert($0).inserted }
+    }
+}
+
 struct ShowResults: View {
     @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
     @Binding var showResults: Bool
@@ -92,6 +99,7 @@ struct ShowReport: View {
     }
     
     var body: some View {
+        let urlnew=renderNew()
         let url = render()
         PDFKitView(url: url)
             .onAppear {
@@ -113,6 +121,47 @@ struct ShowReport: View {
             }
         }.padding(.horizontal, 50).padding(.vertical,20)
             .font(.subheadline)
+    }
+    
+    @MainActor func renderNew() -> URL {
+        let uniqueTimeStamps = filteredDetails.compactMap { Calendar.current.startOfDay(for: $0.timestamp) }.distinct()
+        let modifiedDate = Calendar.current.date(byAdding: .day, value: 1, to: uniqueTimeStamps.first!)
+        
+        var ourDocs : [TPPDF.PDFDocument] = []
+        let recordsPerPage = 20
+        let reportRecordCount = uniqueTimeStamps.count
+        let pageCount = Int((Double (reportRecordCount) / Double (recordsPerPage)).rounded(.up))
+        var currentIndex = 0
+        
+        for currentPage in 0..<pageCount {
+            let recordsInPage = (pageCount-1) == currentPage ? (filteredDetails.count - (currentPage * recordsPerPage)) : recordsPerPage
+            currentIndex = currentPage == 0 ? 0 : currentIndex+recordsPerPage
+            
+            let pageContent = AnyView (VStack {
+                ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: currentPage+1, totalPages: pageCount+1)
+                ShowReportSegment(startIndex: currentIndex, recordsToReport: recordsInPage, records: formatRecords(records: filteredDetails))
+                ShowReportFooter(currentPage: currentPage+1, totalPages: pageCount+1)
+            })
+            let document = PDFDocument(format: .a4)
+            let image = pageContent.snapshotForPrint()
+            let imageElement = PDFImage(image: image!)
+            document.add(image: imageElement)
+            ourDocs.append(document)
+        }
+        
+        let pageContent = AnyView (VStack {
+            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: pageCount+1, totalPages: pageCount+1)
+            ShowBPMaxMin(mmHgSorted: mmHgSorted)
+            ShowReportFooter(currentPage: pageCount+1, totalPages: pageCount+1)
+        })
+        let document = PDFDocument(format: .a4)
+        let image = pageContent.snapshotForPrint()
+        let imageElement = PDFImage(image: image!)
+        document.add(image: imageElement)
+        ourDocs.append(document)
+        
+        let generator = PDFMultiDocumentGenerator(documents: ourDocs)
+        return (try? generator.generateURL(filename: "BPResults.pdf"))!
     }
     
     @MainActor func render() -> URL {
