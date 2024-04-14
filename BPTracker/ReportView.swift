@@ -11,29 +11,6 @@ import SwiftData
 import PDFKit
 import PrintingKit
 
-public extension View {
-    @MainActor
-    func snapshotForPrint(scale: CGFloat? = nil) -> UIImage? {
-        let renderer = ImageRenderer(content: self)
-        renderer.scale = 1.0
-        
-        guard let jpegData = renderer.uiImage?.jpegData(compressionQuality: 0.1),
-              let dp = CGDataProvider(data: jpegData as CFData),
-              let cgImage = CGImage(jpegDataProviderSource: dp, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
-        else {
-            exit(1)
-        }
-        return UIImage(cgImage: cgImage)
-    }
-}
-
-extension Array where Element: Hashable {
-    func distinct() -> Array<Element> {
-        var set = Set<Element>()
-        return filter { set.insert($0).inserted }
-    }
-}
-
 struct ShowResults: View {
     @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
     @Binding var showResults: Bool
@@ -91,6 +68,7 @@ struct ShowReport: View {
     @Binding var showReport: Bool
     @Binding var startDate: Date
     @Binding var endDate: Date
+    var views: [AnyView] = []
     
     var filteredDetails: [BPDetails] {
         return bpDetailResults.compactMap { detailRec in
@@ -100,40 +78,49 @@ struct ShowReport: View {
     
     @State var pdfUrl: URL?
     var body: some View {
-        VStack {
-          if let pdfUrl = pdfUrl {
-            PdfFileView(url: pdfUrl)
-          }
-        }
-        .onAppear {
-          do {
-            let views: [AnyView] = [
-                //AnyView(CreatePDFView.Page1()),
-                AnyView(ShowBPMaxMin(mmHgSorted: mmHgSorted)),
-                AnyView(CreatePDFView.Page2()),
-                AnyView(CreatePDFView.Page3()),
-            ]
-            let url = try createPdf("sample.pdf",
-                                    options: pdfRendererFormat,
-                                    views: views)
-            pdfUrl = url
-            print(url.path)
-          } catch {
-            print(error.localizedDescription)
-          }
-        }
+        var views: [AnyView] = []
 //        VStack {
-//            if let pdfUrl = pdfUrl {
-//                PdfFileView(url: pdfUrl)
-//            }
+//          if let pdfUrl = pdfUrl {
+//            PdfFileView(url: pdfUrl)
+//          }
 //        }
-//        .padding()
 //        .onAppear {
-//            let outputFileURL = try! PdfPage(dailyReadings: reportModel(filteredDetails: filteredDetails),startDate: $startDate, endDate: $endDate).exportToPDF("sample.pdf", width: 350, height: 850 )
-//            pdfUrl = outputFileURL
-//            print("URL = \(String(describing: pdfUrl))")
+//          do {
+//            let views: [AnyView] = [
+//                //AnyView(CreatePDFView.Page1()),
+//                AnyView(ShowBPMaxMin(mmHgSorted: mmHgSorted)),
+//                AnyView(CreatePDFView.Page2()),
+//                AnyView(CreatePDFView.Page3()),
+//            ]
+//            let url = try createPdf("sample.pdf",
+//                                    options: pdfRendererFormat,
+//                                    views: views)
+//            pdfUrl = url
+//            print(url.path)
+//          } catch {
+//            print(error.localizedDescription)
+//          }
 //        }
-//        //let url = render()
+        VStack {
+            if let pdfUrl = pdfUrl {
+                PdfFileView(url: pdfUrl)
+            }
+        }
+        .padding()
+        .onAppear {
+            let dataForReport = reportModel(filteredDetails: filteredDetails)
+            for _ in 0..<2 {
+                views.append(AnyView(PdfPage(dailyReadings: reportModel(filteredDetails: filteredDetails),startDate: $startDate, endDate: $endDate)))
+            }
+            views.append(AnyView(ShowBPMaxMin(mmHgSorted: mmHgSorted)))
+            
+            
+//            let outputFileURL = try! PdfPage(dailyReadings: reportModel(filteredDetails: filteredDetails),startDate: $startDate, endDate: $endDate).exportToPDF("sample.pdf", width: 350, height: 850 )
+            let outputFileURL = try! createPdf("sample.pdf", width: 325, height: 800, views: views )
+            pdfUrl = outputFileURL
+            print("URL = \(String(describing: pdfUrl))")
+        }
+        //let url = render()
 //        PDFKitView(url: url)
 //            .onAppear {
 //                print("URL = \(url)")
@@ -260,7 +247,7 @@ struct PdfPage : View {
                 }
                 .bold()
                 Divider()
-                ForEach(dailyReadings) { readingRec in
+                ForEach(dailyReadings.prefix(35)) { readingRec in
                     GridRow {
                         Text(readingRec.date)
                         ForEach(readingRec.readings) { reading in
@@ -295,20 +282,6 @@ struct ShowReportTitle: View {
         .fontWeight(.bold).padding(.bottom, 20)
     }
 }
-
-//struct ShowReportSegment: View {
-//    var startIndex : Int
-//    var recordsToReport : Int
-//    var records : [String]
-//    
-//    var body: some View {
-//        ForEach (0..<recordsToReport, id: \.self) { nextPageIndex in
-//            Text("\(records[startIndex+nextPageIndex])")
-//                .font(.system(size: 14))
-//            Divider()
-//        }
-//    }
-//}
 
 struct ShowReportFooter: View {
     var currentPage: Int
@@ -381,7 +354,7 @@ struct ShowBPMaxMin: View {
 //}
 
 extension View {
-    func exportToPDF(_ fileName: String, width:CGFloat=595.2, height:CGFloat=841.8) throws -> URL {
+    func exportToPDF(_ fileName: String, width:CGFloat=595.2, height:CGFloat=841.8, views: [AnyView]) throws -> URL {
         let outputFileURL = try createUrl(fileName: fileName)
         let pdfVC = UIHostingController(rootView: self)
         pdfVC.view.frame = CGRect(x: 0, y: 0, width: width, height: height)
@@ -409,19 +382,16 @@ extension View {
 }
 
 
+// New multi page PDF code
 
-
-// add all new
-
-let pdfRendererFormat = [:
-//  kCGPDFContextCreator: "@mbotsu",
-//  kCGPDFContextAuthor: "@mbotsu",
-//  kCGPDFContextTitle: "Create multi-page PDFs with SwiftUI layouts",
-//  kCGPDFContextSubject: "Give up ImageRenderer and create PDFs with UIGraphicsPDFRenderer",
+let pdfRendererFormat = [
+  kCGPDFContextCreator: "@mbotsu",
+  kCGPDFContextAuthor: "@mbotsu",
+  kCGPDFContextTitle: "Create multi-page PDFs with SwiftUI layouts",
+  kCGPDFContextSubject: "Give up ImageRenderer and create PDFs with UIGraphicsPDFRenderer",
 ] as [String : Any]
 
 struct CreatePDFView: View {
-    @Query(sort: \BPDetails.totalmmHg) var mmHgSorted: [BPDetails]
   @State var pdfUrl: URL?
   
   var body: some View {
@@ -433,13 +403,12 @@ struct CreatePDFView: View {
     .onAppear {
       do {
         let views: [AnyView] = [
-          //AnyView(Page1()),
-            AnyView(ShowBPMaxMin(mmHgSorted: mmHgSorted)),
+          AnyView(Page1()),
           AnyView(Page2()),
           AnyView(Page3()),
         ]
         let url = try createPdf("sample.pdf",
-                                options: pdfRendererFormat,
+                                //options: pdfRendererFormat,
                                 views: views)
         pdfUrl = url
         print(url.path)
@@ -451,7 +420,7 @@ struct CreatePDFView: View {
   
   struct Page1: View {
     var body: some View {
-      Text("Page1")//.font(.largeTitle)
+      Text("Page1").font(.largeTitle)
     }
   }
   
@@ -477,28 +446,47 @@ func createUrl(fileName: String) throws -> URL {
   return url
 }
 
-func createPdf(_ fileName: String, options: [String: Any],
-               width:CGFloat=595.2, height:CGFloat=841.8,
-               views: [AnyView]) throws -> URL {
-  
-  let format = UIGraphicsPDFRendererFormat()
-  format.documentInfo = options
-  
-  let url = try createUrl(fileName: fileName)
-  let pdfRect = CGRect(x: 0, y: 0, width: width, height: height)
-  //let pdfRenderer = UIGraphicsPDFRenderer(bounds: pdfRect, format: format)
-    let pdfRenderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: width, height: height))
-  
-  guard let rootVC = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?
-    .windows.last?.rootViewController else {
-    throw NSError(domain: "rootViewController NotFound", code: -1)
-  }
-  
-  try pdfRenderer.writePDF(to: url , withActions: { context in
-    views.forEach{ view in
-      _createPdf(view, rect: pdfRect, context: context, rootViewController: rootVC)
-    }
-  })
+//func createPdf(_ fileName: String, options: [String: Any],
+//               width:CGFloat=595.2, height:CGFloat=841.8,
+//               views: [AnyView]) throws -> URL {
+//  
+//  let format = UIGraphicsPDFRendererFormat()
+//  format.documentInfo = options
+//  
+//  let url = try createUrl(fileName: fileName)
+//  let pdfRect = CGRect(x: 0, y: 0, width: width, height: height)
+//  let pdfRenderer = UIGraphicsPDFRenderer(bounds: pdfRect, format: format)
+//  
+//  guard let rootVC = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?
+//    .windows.last?.rootViewController else {
+//    throw NSError(domain: "rootViewController NotFound", code: -1)
+//  }
+//  
+//  try pdfRenderer.writePDF(to: url , withActions: { context in
+//    views.forEach{ view in
+//      _createPdf(view, rect: pdfRect, context: context, rootViewController: rootVC)
+//    }
+//  })
+    
+    func createPdf(_ fileName: String, width:CGFloat=595.2, height:CGFloat=841.8, views: [AnyView]) throws -> URL {
+      
+      let format = UIGraphicsPDFRendererFormat()
+      //format.documentInfo = options
+      
+      let url = try createUrl(fileName: fileName)
+      let pdfRect = CGRect(x: 0, y: 0, width: width, height: height)
+      let pdfRenderer = UIGraphicsPDFRenderer(bounds: pdfRect, format: format)
+      
+      guard let rootVC = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?
+        .windows.last?.rootViewController else {
+        throw NSError(domain: "rootViewController NotFound", code: -1)
+      }
+      
+      try pdfRenderer.writePDF(to: url , withActions: { context in
+        views.forEach{ view in
+          _createPdf(view, rect: pdfRect, context: context, rootViewController: rootVC)
+        }
+      })
   
   return url
 }
@@ -526,7 +514,7 @@ struct PdfFileView : UIViewRepresentable {
     let pdfView = PDFView()
     pdfView.document = PDFDocument(url: url)
     pdfView.autoScales = true
-    pdfView.displayMode = .singlePageContinuous // .twoUpContinuous
+    pdfView.displayMode = .twoUpContinuous
     
     return pdfView
   }
