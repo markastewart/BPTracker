@@ -85,7 +85,7 @@ struct ShowReport: View {
         .padding()
         .onAppear {
             let dataForReport = reportModel(filteredDetails: filteredDetails)
-            let recordsPerPage = 30
+            let recordsPerPage = 25
             let pageCount = Int((Double (dataForReport.count) / Double (recordsPerPage)).rounded(.up))+1
             var startIndex = 0
             var endIndex = dataForReport.count > recordsPerPage ? recordsPerPage : dataForReport.count
@@ -98,9 +98,9 @@ struct ShowReport: View {
                 remainingRecs = dataForReport.count - endIndex
                 endIndex = remainingRecs < recordsPerPage ? endIndex + remainingRecs : endIndex + recordsPerPage
             }
-            views.append(AnyView(ShowBPMaxMin(mmHgSorted: mmHgSorted, startDate: $startDate, endDate: $endDate, pageNum: pageCount+1, pageCount: pageCount)))
+            views.append(AnyView(ShowBPMaxMin(mmHgSorted: mmHgSorted, startDate: $startDate, endDate: $endDate, pageNum: pageCount, pageCount: pageCount)))
             
-            let outputFileURL = try! createPdf("BPResultReport.pdf", width: 325, height: 800, views: views )
+            let outputFileURL = try! createPdf("BPResultReport.pdf", width: 325, height: 820, views: views )
             pdfUrl = outputFileURL
         }
         
