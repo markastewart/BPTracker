@@ -91,19 +91,19 @@ struct ShowReport: View {
         .onAppear {
             let dataForReport = reportModel(filteredDetails: filteredBPResults)
             let recordsPerPage = 25
-            let pageCount = Int((Double (dataForReport.count) / Double (recordsPerPage)).rounded(.up))+1
+            let pageCount = Int((Double (dataForReport.count) / Double (recordsPerPage)).rounded(.up))
             var startIndex = 0
             var endIndex = dataForReport.count > recordsPerPage ? recordsPerPage : dataForReport.count
             var remainingRecs: Int
             
-            for page in 1...pageCount-1 {
+            for page in 1...pageCount {
                 let dataForPage = Array(dataForReport[startIndex..<endIndex])
                 views.append(AnyView(PdfPage(dailyReadings: dataForPage, startDate: $startDate, endDate: $endDate, pageNum: page, pageCount: pageCount)))
                 startIndex += recordsPerPage
                 remainingRecs = dataForReport.count - endIndex
                 endIndex = remainingRecs < recordsPerPage ? endIndex + remainingRecs : endIndex + recordsPerPage
             }
-            views.append(AnyView(ShowBPMaxMin(mmHgSorted: filteredmmHGResults, startDate: $startDate, endDate: $endDate, pageNum: pageCount, pageCount: pageCount)))
+            //views.append(AnyView(ShowBPMaxMin(mmHgSorted: filteredmmHGResults, startDate: $startDate, endDate: $endDate, pageNum: pageCount, pageCount: pageCount)))
             
             let outputFileURL = try! createPdf("BPResultReport.pdf", width: 325, height: 820, views: views )
             pdfUrl = outputFileURL
