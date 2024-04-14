@@ -1,13 +1,12 @@
-//
-//  ReportView.swift
-//  BPTracker
-//
-//  Created by Mark A Stewart on 4/5/24.
-//
+    //
+    //  ReportView.swift
+    //  BPTracker
+    //
+    //  Created by Mark A Stewart on 4/5/24.
+    //
 
 import SwiftUI
 import SwiftData
-//import TPPDF
 import PDFKit
 import PrintingKit
 
@@ -69,7 +68,6 @@ struct ShowReport: View {
     @Binding var startDate: Date
     @Binding var endDate: Date
     var views: [AnyView] = []
-    
     var filteredDetails: [BPDetails] {
         return bpDetailResults.compactMap { detailRec in
             return detailRec.timestamp >= startDate && detailRec.timestamp <= endDate ? detailRec : nil
@@ -79,28 +77,7 @@ struct ShowReport: View {
     @State var pdfUrl: URL?
     var body: some View {
         var views: [AnyView] = []
-//        VStack {
-//          if let pdfUrl = pdfUrl {
-//            PdfFileView(url: pdfUrl)
-//          }
-//        }
-//        .onAppear {
-//          do {
-//            let views: [AnyView] = [
-//                //AnyView(CreatePDFView.Page1()),
-//                AnyView(ShowBPMaxMin(mmHgSorted: mmHgSorted)),
-//                AnyView(CreatePDFView.Page2()),
-//                AnyView(CreatePDFView.Page3()),
-//            ]
-//            let url = try createPdf("sample.pdf",
-//                                    options: pdfRendererFormat,
-//                                    views: views)
-//            pdfUrl = url
-//            print(url.path)
-//          } catch {
-//            print(error.localizedDescription)
-//          }
-//        }
+        
         VStack {
             if let pdfUrl = pdfUrl {
                 PdfFileView(url: pdfUrl)
@@ -108,23 +85,17 @@ struct ShowReport: View {
         }
         .padding()
         .onAppear {
+            let pageNum = 1
+            let pageCount = 3
             let dataForReport = reportModel(filteredDetails: filteredDetails)
             for _ in 0..<2 {
-                views.append(AnyView(PdfPage(dailyReadings: reportModel(filteredDetails: filteredDetails),startDate: $startDate, endDate: $endDate)))
+                views.append(AnyView(PdfPage(dailyReadings: dataForReport, startDate: $startDate, endDate: $endDate, pageNum: pageNum, pageCount: pageCount)))
             }
-            views.append(AnyView(ShowBPMaxMin(mmHgSorted: mmHgSorted)))
+            views.append(AnyView(ShowBPMaxMin(mmHgSorted: mmHgSorted, startDate: $startDate, endDate: $endDate, pageNum: pageNum, pageCount: pageCount)))
             
-            
-//            let outputFileURL = try! PdfPage(dailyReadings: reportModel(filteredDetails: filteredDetails),startDate: $startDate, endDate: $endDate).exportToPDF("sample.pdf", width: 350, height: 850 )
-            let outputFileURL = try! createPdf("sample.pdf", width: 325, height: 800, views: views )
+            let outputFileURL = try! createPdf("BPResultReport.pdf", width: 325, height: 800, views: views )
             pdfUrl = outputFileURL
-            print("URL = \(String(describing: pdfUrl))")
         }
-        //let url = render()
-//        PDFKitView(url: url)
-//            .onAppear {
-//                print("URL = \(url)")
-//            }
         
         HStack {
             Button {
@@ -142,50 +113,6 @@ struct ShowReport: View {
         }.padding(.horizontal, 50).padding(.vertical,20)
             .font(.subheadline)
     }
-    
-//    @MainActor func render() -> URL {
-//        var ourDocs : [TPPDF.PDFDocument] = []
-//        let recordsPerPage = 20
-//        let recordCount = filteredDetails.count
-//        let pageCount = Int((Double (recordCount) / Double (recordsPerPage)).rounded(.up))
-//        var currentIndex = 0
-//        
-//        for currentPage in 0..<pageCount {
-//            let recordsInPage = (pageCount-1) == currentPage ? (filteredDetails.count - (currentPage * recordsPerPage)) : recordsPerPage
-//            currentIndex = currentPage == 0 ? 0 : currentIndex+recordsPerPage
-//            
-//            let pageContent = AnyView (VStack {
-//                ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: currentPage+1, totalPages: pageCount+1)
-//                ShowReportSegment(startIndex: currentIndex, recordsToReport: recordsInPage, records: formatRecords(records: filteredDetails))
-//                ShowReportFooter(currentPage: currentPage+1, totalPages: pageCount+1)
-//            })
-//            let document = PDFDocument(format: .a4)
-//            let image = pageContent.snapshotForPrint()
-//            let imageElement = PDFImage(image: image!)
-//            document.add(image: imageElement)
-//            ourDocs.append(document)
-//        }
-//        
-//        let pageContent = AnyView (VStack {
-//            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: pageCount+1, totalPages: pageCount+1)
-//            ShowBPMaxMin(mmHgSorted: mmHgSorted)
-//            ShowReportFooter(currentPage: pageCount+1, totalPages: pageCount+1)
-//        })
-//        let document = PDFDocument(format: .a4)
-//        let image = pageContent.snapshotForPrint()
-//        let imageElement = PDFImage(image: image!)
-//        document.add(image: imageElement)
-//        ourDocs.append(document)
-//        
-//        let generator = PDFMultiDocumentGenerator(documents: ourDocs)
-//        return (try? generator.generateURL(filename: "BPResults.pdf"))!
-//    }
-    
-//    func formatRecords(records: [BPDetails]) -> [String] {
-//        return records.map { record in
-//            return "\(record.timestamp.formatted(date: .numeric, time: .shortened)): \(record.systalic)/\(record.distalic) mmHg"
-//        }
-//    }
     
     func reportModel(filteredDetails: [BPDetails]) -> [PdfPage.DailyReadings] {
         let uniqueTimeStamps = filteredDetails.compactMap { Calendar.current.startOfDay(for: $0.timestamp) }.distinct()
@@ -218,10 +145,12 @@ struct ShowReport: View {
     }
 }
 
-struct PdfPage : View {
+struct PdfPage: View {
     var dailyReadings: [DailyReadings]
     @Binding var startDate: Date
     @Binding var endDate: Date
+    var pageNum: Int
+    var pageCount: Int
     
     struct Reading: Identifiable, Equatable {
         var id = UUID()
@@ -261,43 +190,23 @@ struct PdfPage : View {
             }
         }
         .font(.caption2)
-        .frame(width: 380, height: 600)
+        .frame(width: 380)
         
-        ShowReportFooter(currentPage: 1, totalPages: 3)
-    }
-}
-
-struct ShowReportTitle: View {
-    @Binding var startDate: Date
-    @Binding var endDate: Date
-    var currentPage = 0
-    var totalPages = 0
-    
-    var body: some View {
-        VStack {
-            Text("Blood Pressure Results  -  \(Date().formatted(date: .numeric, time: .omitted))")
-            Text("Date range: (\(startDate.formatted(date: .numeric, time: .omitted))-\(endDate.formatted(date: .numeric, time: .omitted)))")
-        }
-        .font(.system(size: 14))
-        .fontWeight(.bold).padding(.bottom, 20)
-    }
-}
-
-struct ShowReportFooter: View {
-    var currentPage: Int
-    var totalPages: Int
-    
-    var body: some View {
-        Text("")
-        Text("Page \(currentPage) of \(totalPages)").font(.caption2)
+        ShowReportFooter(pageNum: pageNum, pageCount: pageCount)
     }
 }
 
 struct ShowBPMaxMin: View {
     var mmHgSorted: [BPDetails]
+    @Binding var startDate: Date
+    @Binding var endDate: Date
     let grid2Member = [GridItem(.fixed(175), alignment: .leading), GridItem(.fixed(75), alignment: .leading)]
+    var pageNum: Int
+    var pageCount: Int
     
     var body: some View {
+        ShowReportTitle(startDate: $startDate, endDate: $endDate)
+        
         if mmHgSorted.count >= 20 {
             VStack {
                 Text("Ten highest BP readings").fontWeight(.bold)
@@ -327,196 +236,47 @@ struct ShowBPMaxMin: View {
                 .padding(.top, 20)
                 .fontWeight(.bold)
         }
-    }
-}
-
-//struct PDFKitView: UIViewRepresentable {
-//    var url: URL
-//    
-//    func makeUIView(context: Context) -> PDFView {
-//        let pdfView = PDFView()
-//        pdfView.document = PDFDocument(url: self.url)
-//        pdfView.autoScales = false
-//        return pdfView
-//    }
-//    
-//    func updateUIView(_ pdfView: PDFView, context: Context) {
-//    }
-//}
-
-//func createUrl(fileName: String) throws -> URL {
-//    let fileManager = FileManager.default
-//    let url = fileManager.temporaryDirectory.appendingPathComponent(fileName, conformingTo: .pdf)
-//    if fileManager.fileExists(atPath: url.path) {
-//        try fileManager.removeItem(at: url)
-//    }
-//    return url
-//}
-
-extension View {
-    func exportToPDF(_ fileName: String, width:CGFloat=595.2, height:CGFloat=841.8, views: [AnyView]) throws -> URL {
-        let outputFileURL = try createUrl(fileName: fileName)
-        let pdfVC = UIHostingController(rootView: self)
-        pdfVC.view.frame = CGRect(x: 0, y: 0, width: width, height: height)
-            //Render the view behind all other views
-        let scenes = UIApplication.shared.connectedScenes
-        let windowScene = scenes.first as? UIWindowScene
-//        let window = windowScene?.windows.first
-        let window = windowScene?.windows.last
         
-        let rootVC = window?.rootViewController
-        rootVC?.addChild(pdfVC)
-        rootVC?.view.insertSubview(pdfVC.view, at: 0)
-            //Render the PDF
-        let pdfRenderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: width, height: height))
-        try pdfRenderer.writePDF(to: outputFileURL, withActions: { context in
-            context.beginPage()
-            rootVC?.view.layer.render(in: context.cgContext)
-        })
-        
-        pdfVC.removeFromParent()
-        pdfVC.view.removeFromSuperview()
-        
-        return outputFileURL
+        ShowReportFooter(pageNum: pageNum, pageCount: pageCount)
     }
 }
 
-
-// New multi page PDF code
-
-let pdfRendererFormat = [
-  kCGPDFContextCreator: "@mbotsu",
-  kCGPDFContextAuthor: "@mbotsu",
-  kCGPDFContextTitle: "Create multi-page PDFs with SwiftUI layouts",
-  kCGPDFContextSubject: "Give up ImageRenderer and create PDFs with UIGraphicsPDFRenderer",
-] as [String : Any]
-
-struct CreatePDFView: View {
-  @State var pdfUrl: URL?
-  
-  var body: some View {
-    VStack {
-      if let pdfUrl = pdfUrl {
-        PdfFileView(url: pdfUrl)
-      }
-    }
-    .onAppear {
-      do {
-        let views: [AnyView] = [
-          AnyView(Page1()),
-          AnyView(Page2()),
-          AnyView(Page3()),
-        ]
-        let url = try createPdf("sample.pdf",
-                                //options: pdfRendererFormat,
-                                views: views)
-        pdfUrl = url
-        print(url.path)
-      } catch {
-        print(error.localizedDescription)
-      }
-    }
-  }
-  
-  struct Page1: View {
-    var body: some View {
-      Text("Page1").font(.largeTitle)
-    }
-  }
-  
-  struct Page2: View {
-    var body: some View {
-      Text("Page2").font(.largeTitle)
-    }
-  }
-  
-  struct Page3: View {
-    var body: some View {
-      Text("Page3").font(.largeTitle)
-    }
-  }
-}
-
-func createUrl(fileName: String) throws -> URL {
-  let fileManager = FileManager.default
-  let url = fileManager.temporaryDirectory.appendingPathComponent(fileName, conformingTo: .pdf)
-  if fileManager.fileExists(atPath: url.path) {
-    try fileManager.removeItem(at: url)
-  }
-  return url
-}
-
-//func createPdf(_ fileName: String, options: [String: Any],
-//               width:CGFloat=595.2, height:CGFloat=841.8,
-//               views: [AnyView]) throws -> URL {
-//  
-//  let format = UIGraphicsPDFRendererFormat()
-//  format.documentInfo = options
-//  
-//  let url = try createUrl(fileName: fileName)
-//  let pdfRect = CGRect(x: 0, y: 0, width: width, height: height)
-//  let pdfRenderer = UIGraphicsPDFRenderer(bounds: pdfRect, format: format)
-//  
-//  guard let rootVC = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?
-//    .windows.last?.rootViewController else {
-//    throw NSError(domain: "rootViewController NotFound", code: -1)
-//  }
-//  
-//  try pdfRenderer.writePDF(to: url , withActions: { context in
-//    views.forEach{ view in
-//      _createPdf(view, rect: pdfRect, context: context, rootViewController: rootVC)
-//    }
-//  })
+struct ShowReportTitle: View {
+    @Binding var startDate: Date
+    @Binding var endDate: Date
+    var currentPage = 0
+    var totalPages = 0
     
-    func createPdf(_ fileName: String, width:CGFloat=595.2, height:CGFloat=841.8, views: [AnyView]) throws -> URL {
-      
-      let format = UIGraphicsPDFRendererFormat()
-      //format.documentInfo = options
-      
-      let url = try createUrl(fileName: fileName)
-      let pdfRect = CGRect(x: 0, y: 0, width: width, height: height)
-      let pdfRenderer = UIGraphicsPDFRenderer(bounds: pdfRect, format: format)
-      
-      guard let rootVC = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?
-        .windows.last?.rootViewController else {
-        throw NSError(domain: "rootViewController NotFound", code: -1)
-      }
-      
-      try pdfRenderer.writePDF(to: url , withActions: { context in
-        views.forEach{ view in
-          _createPdf(view, rect: pdfRect, context: context, rootViewController: rootVC)
+    var body: some View {
+        VStack {
+            Text("Blood Pressure Results  -  \(Date().formatted(date: .numeric, time: .omitted))")
+            Text("Date range: (\(startDate.formatted(date: .numeric, time: .omitted))-\(endDate.formatted(date: .numeric, time: .omitted)))")
         }
-      })
-  
-  return url
+        .font(.system(size: 14))
+        .fontWeight(.bold).padding(.bottom, 20)
+    }
 }
 
-func _createPdf(_ view: AnyView, rect: CGRect,
-                context: UIGraphicsPDFRendererContext, rootViewController: UIViewController){
-  
-  let vc = UIHostingController(rootView: view)
-  vc.view.frame = rect
-  rootViewController.addChild(vc)
-  rootViewController.view.insertSubview(vc.view, at: 0)
-  
-  context.beginPage()
-  context.cgContext.clear(rect)
-  rootViewController.view.layer.render(in: context.cgContext)
-  
-  vc.removeFromParent()
-  vc.view.removeFromSuperview()
+struct ShowReportFooter: View {
+    var pageNum: Int
+    var pageCount: Int
+    
+    var body: some View {
+        Text("")
+        Text("Page \(pageNum) of \(pageCount)").font(.caption2)
+    }
 }
 
 struct PdfFileView : UIViewRepresentable {
-  let url: URL
-  
-  func makeUIView(context: Context) -> some PDFView {
-    let pdfView = PDFView()
-    pdfView.document = PDFDocument(url: url)
-    pdfView.autoScales = true
-    pdfView.displayMode = .twoUpContinuous
+    let url: URL
     
-    return pdfView
-  }
-  func updateUIView(_ uiView: UIViewType, context: Context) {}
+    func makeUIView(context: Context) -> some PDFView {
+        let pdfView = PDFView()
+        pdfView.document = PDFDocument(url: url)
+        pdfView.autoScales = true
+        pdfView.displayMode = .twoUpContinuous
+        
+        return pdfView
+    }
+    func updateUIView(_ uiView: UIViewType, context: Context) {}
 }
