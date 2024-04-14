@@ -286,6 +286,7 @@ struct PdfFileView : UIViewRepresentable {
         let pdfView = PDFView()
         pdfView.document = PDFDocument(url: url)
         pdfView.autoScales = true
+        pdfView.displayMode = .singlePageContinuous
         
         return pdfView
     }
