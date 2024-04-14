@@ -60,10 +60,10 @@ struct ShowResults: View {
     }
 }
 
-
 struct ShowReport: View {
     @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
     @Query(sort: \BPDetails.totalmmHg) var mmHgSorted: [BPDetails]
+    @State var pdfUrl: URL?
     @Binding var showReport: Bool
     @Binding var startDate: Date
     @Binding var endDate: Date
@@ -74,7 +74,6 @@ struct ShowReport: View {
         }
     }
     
-    @State var pdfUrl: URL?
     var body: some View {
         var views: [AnyView] = []
         
@@ -85,13 +84,21 @@ struct ShowReport: View {
         }
         .padding()
         .onAppear {
-            let pageNum = 1
-            let pageCount = 3
             let dataForReport = reportModel(filteredDetails: filteredDetails)
-            for _ in 0..<2 {
-                views.append(AnyView(PdfPage(dailyReadings: dataForReport, startDate: $startDate, endDate: $endDate, pageNum: pageNum, pageCount: pageCount)))
+            let recordsPerPage = 30
+            let pageCount = Int((Double (dataForReport.count) / Double (recordsPerPage)).rounded(.up))+1
+            var startIndex = 0
+            var endIndex = dataForReport.count > recordsPerPage ? recordsPerPage : dataForReport.count
+            var remainingRecs: Int
+            
+            for page in 1...pageCount-1 {
+                let dataForPage = Array(dataForReport[startIndex..<endIndex])
+                views.append(AnyView(PdfPage(dailyReadings: dataForPage, startDate: $startDate, endDate: $endDate, pageNum: page, pageCount: pageCount)))
+                startIndex += recordsPerPage
+                remainingRecs = dataForReport.count - endIndex
+                endIndex = remainingRecs < recordsPerPage ? endIndex + remainingRecs : endIndex + recordsPerPage
             }
-            views.append(AnyView(ShowBPMaxMin(mmHgSorted: mmHgSorted, startDate: $startDate, endDate: $endDate, pageNum: pageNum, pageCount: pageCount)))
+            views.append(AnyView(ShowBPMaxMin(mmHgSorted: mmHgSorted, startDate: $startDate, endDate: $endDate, pageNum: pageCount+1, pageCount: pageCount)))
             
             let outputFileURL = try! createPdf("BPResultReport.pdf", width: 325, height: 800, views: views )
             pdfUrl = outputFileURL
@@ -123,7 +130,7 @@ struct ShowReport: View {
             var dailyReading = PdfPage.DailyReadings(date: "", readings: [])
             let modifiedDate = Calendar.current.date(byAdding: .day, value: 1, to: uniqueTimeStamps[dailyTimeStamp])
             let recordsForDay = filteredDetails.filter({$0.timestamp >= uniqueTimeStamps[dailyTimeStamp] && $0.timestamp < modifiedDate!})
-            let recordsForLine = recordsForDay.count > maxRecordsPerLine ? maxRecordsPerLine : recordsForDay.count
+            let recordsForRow = recordsForDay.count > maxRecordsPerLine ? maxRecordsPerLine : recordsForDay.count
             
             let timeFormatter = DateFormatter()
             timeFormatter.dateFormat = "HH:mm"
@@ -131,7 +138,7 @@ struct ShowReport: View {
             dateFormatter.dateFormat = "MM/dd/yy"
             
             dailyReading.date = dateFormatter.string(from: uniqueTimeStamps[dailyTimeStamp])
-            for dailyRecIndex in 0..<recordsForLine{
+            for dailyRecIndex in 0..<recordsForRow{
                 let readingTime = timeFormatter.string(from: recordsForDay[dailyRecIndex].timestamp)
                 let systolicString = String (recordsForDay[dailyRecIndex].systalic)
                 let distalicString = String (recordsForDay[dailyRecIndex].distalic)
@@ -176,7 +183,7 @@ struct PdfPage: View {
                 }
                 .bold()
                 Divider()
-                ForEach(dailyReadings.prefix(35)) { readingRec in
+                ForEach(dailyReadings) { readingRec in
                     GridRow {
                         Text(readingRec.date)
                         ForEach(readingRec.readings) { reading in
@@ -218,7 +225,7 @@ struct ShowBPMaxMin: View {
                         Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
                     }.id(bpRecord.id)
                 }
-            }.font(.subheadline).padding(.top, 15)
+            }.font(.caption2).padding(.top, 15)
             
             VStack {
                 Text("Ten lowest BP readings").fontWeight(.bold)
@@ -230,7 +237,7 @@ struct ShowBPMaxMin: View {
                         Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
                     }.id(bpRecord.id)
                 }
-            }.font(.subheadline).padding(.vertical, 15)
+            }.font(.caption2).padding(.vertical, 15)
         } else {
             Text("Insufficent number of readings to report ten highest and lowest readings")
                 .padding(.top, 20)
@@ -274,7 +281,6 @@ struct PdfFileView : UIViewRepresentable {
         let pdfView = PDFView()
         pdfView.document = PDFDocument(url: url)
         pdfView.autoScales = true
-        pdfView.displayMode = .twoUpContinuous
         
         return pdfView
     }
