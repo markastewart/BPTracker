@@ -98,17 +98,28 @@ struct ShowReport: View {
         }
     }
     
+    @State var pdfUrl: URL?
     var body: some View {
-        let urlnew=renderNew()
-        let url = render()
-        PDFKitView(url: url)
-            .onAppear {
-                print("URL = \(url)")
+        VStack {
+            if let pdfUrl = pdfUrl {
+                PDFKitView(url: pdfUrl)
             }
+        }
+        .padding()
+        .onAppear {
+            let outputFileURL = try! PdfPage(dailyReadings: reportModel(filteredDetails: filteredDetails),startDate: $startDate, endDate: $endDate).exportToPDF("sample.pdf", width: 350, height: 850 )
+            pdfUrl = outputFileURL
+            print("URL = \(String(describing: pdfUrl))")
+        }
+//        //let url = render()
+//        PDFKitView(url: url)
+//            .onAppear {
+//                print("URL = \(url)")
+//            }
         
         HStack {
             Button {
-                try? Printer().print(PrintItem.pdfFile(at: url))
+                try? Printer().print(PrintItem.pdfFile(at: pdfUrl))
             } label: {
                 Text("Print")
                 Image(systemName: "printer")
@@ -121,47 +132,6 @@ struct ShowReport: View {
             }
         }.padding(.horizontal, 50).padding(.vertical,20)
             .font(.subheadline)
-    }
-    
-    @MainActor func renderNew() -> URL {
-        let uniqueTimeStamps = filteredDetails.compactMap { Calendar.current.startOfDay(for: $0.timestamp) }.distinct()
-        let modifiedDate = Calendar.current.date(byAdding: .day, value: 1, to: uniqueTimeStamps.first!)
-        
-        var ourDocs : [TPPDF.PDFDocument] = []
-        let recordsPerPage = 20
-        let reportRecordCount = uniqueTimeStamps.count
-        let pageCount = Int((Double (reportRecordCount) / Double (recordsPerPage)).rounded(.up))
-        var currentIndex = 0
-        
-        for currentPage in 0..<pageCount {
-            let recordsInPage = (pageCount-1) == currentPage ? (filteredDetails.count - (currentPage * recordsPerPage)) : recordsPerPage
-            currentIndex = currentPage == 0 ? 0 : currentIndex+recordsPerPage
-            
-            let pageContent = AnyView (VStack {
-                ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: currentPage+1, totalPages: pageCount+1)
-                ShowReportSegment(startIndex: currentIndex, recordsToReport: recordsInPage, records: formatRecords(records: filteredDetails))
-                ShowReportFooter(currentPage: currentPage+1, totalPages: pageCount+1)
-            })
-            let document = PDFDocument(format: .a4)
-            let image = pageContent.snapshotForPrint()
-            let imageElement = PDFImage(image: image!)
-            document.add(image: imageElement)
-            ourDocs.append(document)
-        }
-        
-        let pageContent = AnyView (VStack {
-            ShowReportTitle(startDate: $startDate, endDate:$endDate, currentPage: pageCount+1, totalPages: pageCount+1)
-            ShowBPMaxMin(mmHgSorted: mmHgSorted)
-            ShowReportFooter(currentPage: pageCount+1, totalPages: pageCount+1)
-        })
-        let document = PDFDocument(format: .a4)
-        let image = pageContent.snapshotForPrint()
-        let imageElement = PDFImage(image: image!)
-        document.add(image: imageElement)
-        ourDocs.append(document)
-        
-        let generator = PDFMultiDocumentGenerator(documents: ourDocs)
-        return (try? generator.generateURL(filename: "BPResults.pdf"))!
     }
     
     @MainActor func render() -> URL {
@@ -207,7 +177,85 @@ struct ShowReport: View {
             return "\(record.timestamp.formatted(date: .numeric, time: .shortened)): \(record.systalic)/\(record.distalic) mmHg"
         }
     }
+    
+    func reportModel(filteredDetails: [BPDetails]) -> [PdfPage.DailyReadings] {
+        let uniqueTimeStamps = filteredDetails.compactMap { Calendar.current.startOfDay(for: $0.timestamp) }.distinct()
+        var dailyReadings : [PdfPage.DailyReadings] = []
+        let maxRecordsPerLine = 3
+        
+        for dailyTimeStamp in 0..<uniqueTimeStamps.count {
+            var dailyReading = PdfPage.DailyReadings(date: "", readings: [])
+            let modifiedDate = Calendar.current.date(byAdding: .day, value: 1, to: uniqueTimeStamps[dailyTimeStamp])
+            let recordsForDay = filteredDetails.filter({$0.timestamp >= uniqueTimeStamps[dailyTimeStamp] && $0.timestamp < modifiedDate!})
+            let recordsForLine = recordsForDay.count > maxRecordsPerLine ? maxRecordsPerLine : recordsForDay.count
+            
+            let timeFormatter = DateFormatter()
+            timeFormatter.dateFormat = "HH:mm"
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "MM/dd/yy"
+            
+            dailyReading.date = dateFormatter.string(from: uniqueTimeStamps[dailyTimeStamp])
+            for dailyRecIndex in 0..<recordsForLine{
+                let readingTime = timeFormatter.string(from: recordsForDay[dailyRecIndex].timestamp)
+                let systolicString = String (recordsForDay[dailyRecIndex].systalic)
+                let distalicString = String (recordsForDay[dailyRecIndex].distalic)
+                var thisReading = PdfPage.Reading(eachReading: "")
+                thisReading.eachReading = readingTime + " " + systolicString + "/" + distalicString
+                dailyReading.readings.append(thisReading)
+            }
+            dailyReadings.append(dailyReading)
+        }
+        return dailyReadings
+    }
 }
+
+struct PdfPage : View {
+    var dailyReadings: [DailyReadings]
+    @Binding var startDate: Date
+    @Binding var endDate: Date
+    
+    struct Reading: Identifiable, Equatable {
+        var id = UUID()
+        var eachReading: String
+    }
+    
+    struct DailyReadings: Identifiable, Equatable {
+        var id = UUID()
+        var date: String
+        var readings: [Reading]
+    }
+    
+    var body: some View {
+        ShowReportTitle(startDate: $startDate, endDate: $endDate)
+        
+        List {
+            Grid {
+                GridRow {
+                    Text("Date")
+                    Text("Reading1")
+                    Text("Reading2")
+                    Text("Reading3")
+                }
+                .bold()
+                Divider()
+                ForEach(dailyReadings) { readingRec in
+                    GridRow {
+                        Text(readingRec.date)
+                        ForEach(readingRec.readings) { reading in
+                            Text(reading.eachReading)
+                        }
+                    }.font(.caption2)
+                    if readingRec != dailyReadings.last {
+                        Divider()
+                    }
+                }
+            }
+        }
+        .font(.caption2)
+        .frame(width: 380, height: 700)
+    }
+}
+
 struct ShowReportTitle: View {
     @Binding var startDate: Date
     @Binding var endDate: Date
@@ -296,5 +344,42 @@ struct PDFKitView: UIViewRepresentable {
     }
     
     func updateUIView(_ pdfView: PDFView, context: Context) {
+    }
+}
+
+func createUrl(fileName: String) throws -> URL {
+    let fileManager = FileManager.default
+    let url = fileManager.temporaryDirectory.appendingPathComponent(fileName, conformingTo: .pdf)
+    if fileManager.fileExists(atPath: url.path) {
+        try fileManager.removeItem(at: url)
+    }
+    return url
+}
+
+extension View {
+    func exportToPDF(_ fileName: String, width:CGFloat=595.2, height:CGFloat=841.8) throws -> URL {
+        let outputFileURL = try createUrl(fileName: fileName)
+        let pdfVC = UIHostingController(rootView: self)
+        pdfVC.view.frame = CGRect(x: 0, y: 0, width: width, height: height)
+            //Render the view behind all other views
+        let scenes = UIApplication.shared.connectedScenes
+        let windowScene = scenes.first as? UIWindowScene
+//        let window = windowScene?.windows.first
+        let window = windowScene?.windows.last
+        
+        let rootVC = window?.rootViewController
+        rootVC?.addChild(pdfVC)
+        rootVC?.view.insertSubview(pdfVC.view, at: 0)
+            //Render the PDF
+        let pdfRenderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: width, height: height))
+        try pdfRenderer.writePDF(to: outputFileURL, withActions: { (context) in
+            context.beginPage()
+            rootVC?.view.layer.render(in: context.cgContext)
+        })
+        
+        pdfVC.removeFromParent()
+        pdfVC.view.removeFromSuperview()
+        
+        return outputFileURL
     }
 }

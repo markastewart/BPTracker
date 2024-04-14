@@ -37,16 +37,16 @@ final class BPDetails {
         let calendar = Calendar.current
         var dateComponents = DateComponents()
         
-        for _ in 0...40 {
+        for _ in 0...60 {
             dateComponents.year = 2024
             dateComponents.month = Int.random(in: 3..<5)
             dateComponents.day = Int.random(in: 1..<30)
             dateComponents.hour = Int.random(in: 1..<24)
             dateComponents.minute = 15
             let bpTimeStamp = calendar.date(from: dateComponents)
-            let systalic = Int.random(in: 0..<60)
-            let distalic = Int.random(in: 0..<50)
-            //saveBPDetails(context:context, bpTimeStamp:bpTimeStamp!, systolic:systalic, diastolic:distalic)
+            let systalic = Int.random(in: 90..<165)
+            let distalic = Int.random(in: 65..<140)
+//            saveBPDetails(context:context, bpTimeStamp:bpTimeStamp!, systolic:systalic, diastolic:distalic)
         }
     }
 }
