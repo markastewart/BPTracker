@@ -163,22 +163,22 @@ struct PdfPage: View {
     @Binding var endDate: Date
     var pageNum: Int
     var pageCount: Int
-    
+
     struct Reading: Identifiable, Equatable {
         var id = UUID()
         var eachReading: String
     }
-    
+
     struct DailyReadings: Identifiable, Equatable {
         var id = UUID()
         var date: String
         var readings: [Reading]
     }
-    
+
     var body: some View {
-        ShowReportTitle(startDate: $startDate, endDate: $endDate)
-        
-        List {
+        VStack(alignment: .leading, spacing: 12) {
+            ShowReportTitle(startDate: $startDate, endDate: $endDate)
+
             Grid {
                 GridRow {
                     Text("Date")
@@ -200,11 +200,13 @@ struct PdfPage: View {
                     }
                 }
             }
+            .font(.caption2)
+            .frame(width: 300)
+
+            ShowReportFooter(pageNum: pageNum, pageCount: pageCount)
         }
-        .font(.caption2)
-        .frame(width: 380)
-        
-        ShowReportFooter(pageNum: pageNum, pageCount: pageCount)
+        .background(Color.white)
+        .frame(width: 300)
     }
 }
 

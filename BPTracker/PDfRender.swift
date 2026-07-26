@@ -36,22 +36,19 @@ func createPdf(_ fileName: String, width: CGFloat = 595.2, height: CGFloat = 841
 func _createPdf(_ view: AnyView, rect: CGRect, context: UIGraphicsPDFRendererContext) {
     let hostingController = UIHostingController(rootView: view)
     hostingController.view.frame = rect
-    hostingController.view.backgroundColor = .clear
+    hostingController.view.backgroundColor = .white   // was .clear
 
-    // Metal-backed content (materials, blurs, some gradients/shapes) only
-    // composites correctly once it's part of a real window — capturing it
-    // while fully detached produces the yellow/red "unable to render"
-    // placeholder. A throwaway window (not the app's real one) gives it
-    // that without touching the real view hierarchy or crashing.
     let renderWindow = UIWindow(frame: rect)
+    renderWindow.backgroundColor = .white
     renderWindow.rootViewController = hostingController
     renderWindow.windowLevel = .alert + 1
-    renderWindow.alpha = 0.01   // effectively invisible, but still genuinely composited
+    renderWindow.alpha = 0.01
     renderWindow.isHidden = false
     hostingController.view.layoutIfNeeded()
 
     context.beginPage()
-    context.cgContext.clear(rect)
+    context.cgContext.setFillColor(UIColor.white.cgColor)
+    context.cgContext.fill(rect)                      // was context.cgContext.clear(rect)
     hostingController.view.layer.render(in: context.cgContext)
 
     renderWindow.isHidden = true
