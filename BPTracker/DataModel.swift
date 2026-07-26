@@ -31,10 +31,10 @@ final class BPDetails {
         newItem.distalic = diastolic
         newItem.totalmmHg = newItem.systalic + newItem.distalic
         context.insert(newItem)
+        try! context.save()
     }
     
     func loadRecs(context: ModelContext) {
-        let calendar = Calendar.current
         var dateComponents = DateComponents()
         
         for _ in 0...60 {
@@ -43,10 +43,6 @@ final class BPDetails {
             dateComponents.day = Int.random(in: 1..<30)
             dateComponents.hour = Int.random(in: 1..<24)
             dateComponents.minute = 15
-            let bpTimeStamp = calendar.date(from: dateComponents)
-            let systalic = Int.random(in: 90..<165)
-            let distalic = Int.random(in: 65..<140)
-//            saveBPDetails(context:context, bpTimeStamp:bpTimeStamp!, systolic:systalic, diastolic:distalic)
         }
     }
 }

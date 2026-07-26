@@ -17,6 +17,9 @@ struct BPTrackerApp: App {
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {
+            if let url = try! ModelContainer(for: schema, configurations: [modelConfiguration]).configurations.first?.url {
+                print("SwiftData DB Path: \(url.path)")
+            }
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
