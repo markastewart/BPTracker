@@ -39,9 +39,6 @@ struct EnterInputView: View {
             
             HStack {
                 DatePicker("Time of Reading", selection: $bpTimeStamp, displayedComponents:.hourAndMinute)
-                    .onAppear{
-                        UIDatePicker.appearance().minuteInterval = 15
-                    }
                 Spacer()
             }.padding(.horizontal, 20)
             
