@@ -63,6 +63,7 @@ struct EnterInputView: View {
                         .keyboardType(.numberPad)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 80)
+                        .multilineTextAlignment(.center)
                         .foregroundColor(isSystolicValid ? .primary : .red)
                     Spacer()
                 }
@@ -80,6 +81,7 @@ struct EnterInputView: View {
                         .keyboardType(.numberPad)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 80)
+                        .multilineTextAlignment(.center)
                         .foregroundColor(isDistolicValid ? .primary : .red)
                     Spacer()
                 }
@@ -97,6 +99,7 @@ struct EnterInputView: View {
                         .keyboardType(.numberPad)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 80)
+                        .multilineTextAlignment(.center)
                         .foregroundColor(isPulseValid ? .primary : .red)
                     Spacer()
                 }
