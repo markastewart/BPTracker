@@ -103,7 +103,6 @@ struct ShowReport: View {
                 remainingRecs = dataForReport.count - endIndex
                 endIndex = remainingRecs < recordsPerPage ? endIndex + remainingRecs : endIndex + recordsPerPage
             }
-            //views.append(AnyView(ShowBPMaxMin(mmHgSorted: filteredmmHGResults, startDate: $startDate, endDate: $endDate, pageNum: pageCount, pageCount: pageCount)))
             
             let outputFileURL = try! createPdf("BPResultReport.pdf", width: 325, height: 820, views: views )
             pdfUrl = outputFileURL

@@ -26,12 +26,13 @@ final class BPDetails {
         self.pulse = 0
     }
     
-    func saveBPDetails(context:ModelContext, bpTimeStamp:Date, systolic:Int, diastolic:Int) {
+    func saveBPDetails(context: ModelContext, bpTimeStamp: Date, systolic: Int, diastolic: Int, pulse: Int) {
         let newItem = BPDetails()
         newItem.timestamp = bpTimeStamp
         newItem.systalic = systolic
         newItem.distalic = diastolic
         newItem.totalmmHg = newItem.systalic + newItem.distalic
+        newItem.pulse = pulse
         context.insert(newItem)
         try! context.save()
     }
