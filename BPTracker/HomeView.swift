@@ -45,12 +45,15 @@ struct HomeView: View {
                         }
                         .onDelete(perform: deleteItems)
                         .onChange(of: bpDetailResults.count) {
-                            let lastRecord = bpDetailResults.count - 1
-                            scrollView.scrollTo(bpDetailResults[lastRecord].id)
+                            if let firstRecord = bpDetailResults.first {
+                                scrollView.scrollTo(firstRecord.id, anchor: .top)
+                            }
                         }
                         .onAppear(perform: {
                             DispatchQueue.main.async() {
-                                scrollView.scrollTo(bpDetailResults[bpDetailResults.count - 1].id)
+                                if let firstRecord = bpDetailResults.first {
+                                    scrollView.scrollTo(firstRecord.id, anchor: .top)
+                                }
                             }
                         })
                     }
