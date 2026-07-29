@@ -20,7 +20,7 @@ struct ShowResults: View {
     var body: some View {
         HStack {
             Spacer()
-            Text("Select Blood Pressure Results").font(.headline).padding(.vertical, 35)
+            Text("Select Date Range for Results").font(.headline).padding(.vertical, 35)
                 .onAppear() {
                     if let firstBPRec = bpDetailResults.first {
                         startDate = firstBPRec.timestamp
@@ -61,7 +61,7 @@ struct ShowResults: View {
 }
 
 struct ShowReport: View {
-    @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
+    @Query(sort: \BPDetails.timestamp, order: .reverse) var bpDetailResults: [BPDetails]
     @Query(sort: \BPDetails.totalmmHg) var mmHgSorted: [BPDetails]
     @State var pdfUrl: URL?
     @Binding var showReport: Bool
@@ -91,20 +91,19 @@ struct ShowReport: View {
         .onAppear {
             let dataForReport = reportModel(filteredDetails: filteredBPResults)
             let recordsPerPage = 25
-            let pageCount = Int((Double (dataForReport.count) / Double (recordsPerPage)).rounded(.up))
+            let pageCount = max(1, Int((Double(dataForReport.count) / Double(recordsPerPage)).rounded(.up)))
             var startIndex = 0
-            var endIndex = dataForReport.count > recordsPerPage ? recordsPerPage : dataForReport.count
-            var remainingRecs: Int
             
-            for page in 1...pageCount {
-                let dataForPage = Array(dataForReport[startIndex..<endIndex])
-                views.append(AnyView(PdfPage(dailyReadings: dataForPage, startDate: $startDate, endDate: $endDate, pageNum: page, pageCount: pageCount)))
-                startIndex += recordsPerPage
-                remainingRecs = dataForReport.count - endIndex
-                endIndex = remainingRecs < recordsPerPage ? endIndex + remainingRecs : endIndex + recordsPerPage
+            if !dataForReport.isEmpty {
+                for page in 1...pageCount {
+                    let endIndex = min(startIndex + recordsPerPage, dataForReport.count)
+                    let dataForPage = Array(dataForReport[startIndex..<endIndex])
+                    views.append(AnyView(PdfPage(readings: dataForPage, startDate: $startDate, endDate: $endDate, pageNum: page, pageCount: pageCount)))
+                    startIndex = endIndex
+                }
             }
             
-            let outputFileURL = try! createPdf("BPResultReport.pdf", width: 325, height: 820, views: views )
+            let outputFileURL = try! createPdf("BPResultReport.pdf", width: 325, height: 820, views: views)
             pdfUrl = outputFileURL
         }
         
@@ -123,87 +122,73 @@ struct ShowReport: View {
             Button("Cancel") {
                 showReport = false
             }
-        }.padding(.horizontal, 50).padding(.vertical,20)
+        }.padding(.horizontal, 50).padding(.vertical, 20)
             .font(.subheadline)
     }
     
-    func reportModel(filteredDetails: [BPDetails]) -> [PdfPage.DailyReadings] {
-        let uniqueTimeStamps = filteredDetails.compactMap { Calendar.current.startOfDay(for: $0.timestamp) }.distinct()
-        var dailyReadings : [PdfPage.DailyReadings] = []
-        let maxRecordsPerLine = 3
+    func reportModel(filteredDetails: [BPDetails]) -> [PdfPage.ReportRow] {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MM/dd/yy"
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
         
-        for dailyTimeStamp in 0..<uniqueTimeStamps.count {
-            var dailyReading = PdfPage.DailyReadings(date: "", readings: [])
-            let modifiedDate = Calendar.current.date(byAdding: .day, value: 1, to: uniqueTimeStamps[dailyTimeStamp])
-            let recordsForDay = filteredDetails.filter({$0.timestamp >= uniqueTimeStamps[dailyTimeStamp] && $0.timestamp < modifiedDate!})
-            let recordsForRow = recordsForDay.count > maxRecordsPerLine ? maxRecordsPerLine : recordsForDay.count
+        var rows: [PdfPage.ReportRow] = []
+        var lastDay: Date?
+        
+        for record in filteredDetails {
+            let recordDay = Calendar.current.startOfDay(for: record.timestamp)
+            let dateText = (recordDay == lastDay) ? "" : dateFormatter.string(from: record.timestamp)
+            lastDay = recordDay
             
-            let timeFormatter = DateFormatter()
-            timeFormatter.dateFormat = "HH:mm"
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "MM/dd/yy"
+            let timeText = timeFormatter.string(from: record.timestamp)
+            let readingText = "\(record.systalic)/\(record.distalic) (\(record.pulse))"
             
-            dailyReading.date = dateFormatter.string(from: uniqueTimeStamps[dailyTimeStamp])
-            for dailyRecIndex in 0..<recordsForRow{
-                let readingTime = timeFormatter.string(from: recordsForDay[dailyRecIndex].timestamp)
-                let systolicString = String (recordsForDay[dailyRecIndex].systalic)
-                let distalicString = String (recordsForDay[dailyRecIndex].distalic)
-                var thisReading = PdfPage.Reading(eachReading: "")
-                thisReading.eachReading = readingTime + " " + systolicString + "/" + distalicString
-                dailyReading.readings.append(thisReading)
-            }
-            dailyReadings.append(dailyReading)
+            rows.append(PdfPage.ReportRow(dateText: dateText, timeText: timeText, readingText: readingText))
         }
-        return dailyReadings
+        return rows
     }
 }
 
 struct PdfPage: View {
-    var dailyReadings: [DailyReadings]
+    var readings: [ReportRow]
     @Binding var startDate: Date
     @Binding var endDate: Date
     var pageNum: Int
     var pageCount: Int
-
-    struct Reading: Identifiable, Equatable {
+    
+    struct ReportRow: Identifiable, Equatable {
         var id = UUID()
-        var eachReading: String
+        var dateText: String
+        var timeText: String
+        var readingText: String
     }
-
-    struct DailyReadings: Identifiable, Equatable {
-        var id = UUID()
-        var date: String
-        var readings: [Reading]
-    }
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             ShowReportTitle(startDate: $startDate, endDate: $endDate)
-
+            
             Grid {
                 GridRow {
                     Text("Date")
-                    Text("Reading1")
-                    Text("Reading2")
-                    Text("Reading3")
+                    Text("Time")
+                    Text("BP / Pulse")
                 }
                 .bold()
                 Divider()
-                ForEach(dailyReadings) { readingRec in
+                ForEach(readings) { row in
                     GridRow {
-                        Text(readingRec.date)
-                        ForEach(readingRec.readings) { reading in
-                            Text(reading.eachReading)
-                        }
+                        Text(row.dateText)
+                        Text(row.timeText)
+                        Text(row.readingText)
                     }.font(.caption2)
-                    if readingRec != dailyReadings.last {
+                    if row != readings.last {
                         Divider()
                     }
                 }
             }
             .font(.caption2)
             .frame(width: 300)
-
+            
             ShowReportFooter(pageNum: pageNum, pageCount: pageCount)
         }
         .background(Color.white)
@@ -264,9 +249,10 @@ struct ShowReportTitle: View {
     
     var body: some View {
         VStack {
-            Text("Blood Pressure Results  -  \(Date().formatted(date: .numeric, time: .omitted))")
+            Text("BP/Pulse Results  -  \(Date().formatted(date: .numeric, time: .omitted))")
             Text("Date range: (\(startDate.formatted(date: .numeric, time: .omitted))-\(endDate.formatted(date: .numeric, time: .omitted)))")
         }
+        .frame(maxWidth: .infinity, alignment: .center)
         .font(.system(size: 14))
         .fontWeight(.bold).padding(.bottom, 20)
     }
@@ -277,8 +263,8 @@ struct ShowReportFooter: View {
     var pageCount: Int
     
     var body: some View {
-        Text("")
         Text("Page \(pageNum) of \(pageCount)").font(.caption2)
+            .frame(maxWidth: .infinity, alignment: .center)
     }
 }
 
