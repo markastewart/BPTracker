@@ -15,6 +15,7 @@ final class BPDetails {
     var systalic: Int
     var distalic: Int
     var totalmmHg: Int
+    var pulse = 0
     
     init() {
         self.id = UUID()
@@ -22,6 +23,7 @@ final class BPDetails {
         self.systalic = 0
         self.distalic = 0
         self.totalmmHg = 0
+        self.pulse = 0
     }
     
     func saveBPDetails(context:ModelContext, bpTimeStamp:Date, systolic:Int, diastolic:Int) {

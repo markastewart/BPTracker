@@ -37,9 +37,11 @@ struct HomeView: View {
                     List {
                         ForEach(bpDetailResults) { bpRecord in
                             LazyVGrid(columns: grid2Member) {
-                                Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened)).font(.subheadline)
-                                Text("\(bpRecord.systalic)/\(bpRecord.distalic)").font(.subheadline)
-                            }.id(bpRecord.id)
+                                Text(bpRecord.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened))
+                                Text("\(bpRecord.systalic)/\(bpRecord.distalic) (\(bpRecord.pulse))")
+                            }
+                            .id(bpRecord.id)
+                            .font(.subheadline)
                         }
                         .onDelete(perform: deleteItems)
                         .onChange(of: bpDetailResults.count) {
