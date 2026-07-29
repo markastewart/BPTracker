@@ -111,7 +111,9 @@ struct ShowReport: View {
         
         HStack {
             Button {
-                try? Printer().print(PrintItem.pdfFile(at: pdfUrl))
+                if let pdfUrl {
+                    try? Printer.shared.printPdfFile(at: pdfUrl)
+                }
             } label: {
                 Text("Print")
                 Image(systemName: "printer")
