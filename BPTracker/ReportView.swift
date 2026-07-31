@@ -8,7 +8,6 @@
 import SwiftUI
 import SwiftData
 import PDFKit
-import PrintingKit
 
 struct ShowResults: View {
     @Query(sort: \BPDetails.timestamp) var bpDetailResults: [BPDetails]
@@ -110,7 +109,9 @@ struct ShowReport: View {
         HStack {
             Button {
                 if let pdfUrl {
-                    try? Printer.shared.printPdfFile(at: pdfUrl)
+                    let printController = UIPrintInteractionController.shared
+                    printController.printingItem = pdfUrl
+                    printController.present(animated: true)
                 }
             } label: {
                 Text("Print")

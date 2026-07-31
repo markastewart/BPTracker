@@ -11,12 +11,10 @@
 		560A1F8C2BB23FDA0065E280 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 560A1F8B2BB23FDA0065E280 /* Assets.xcassets */; };
 		560A1F902BB23FDA0065E280 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 560A1F8F2BB23FDA0065E280 /* Preview Assets.xcassets */; };
 		560A1F972BB24A820065E280 /* DataModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 560A1F962BB24A820065E280 /* DataModel.swift */; };
-		563924962BCC37ED00BD659A /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 563924952BCC37ED00BD659A /* Extensions.swift */; };
 		563924982BCC49C100BD659A /* PDfRender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 563924972BCC49C100BD659A /* PDfRender.swift */; };
 		56C037D92BC0970000B04685 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56C037D82BC096FF00B04685 /* HomeView.swift */; };
 		56C037DB2BC0981200B04685 /* EnterInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56C037DA2BC0981200B04685 /* EnterInputView.swift */; };
 		56C037DF2BC0992F00B04685 /* ReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56C037DE2BC0992F00B04685 /* ReportView.swift */; };
-		56C037E22BC5CCAD00B04685 /* PrintingKit in Frameworks */ = {isa = PBXBuildFile; productRef = 56C037E12BC5CCAD00B04685 /* PrintingKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,7 +24,6 @@
 		560A1F8D2BB23FDA0065E280 /* BPTracker.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BPTracker.entitlements; sourceTree = "<group>"; };
 		560A1F8F2BB23FDA0065E280 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		560A1F962BB24A820065E280 /* DataModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataModel.swift; sourceTree = "<group>"; };
-		563924952BCC37ED00BD659A /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		563924972BCC49C100BD659A /* PDfRender.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDfRender.swift; sourceTree = "<group>"; };
 		56C037D82BC096FF00B04685 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		56C037DA2BC0981200B04685 /* EnterInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnterInputView.swift; sourceTree = "<group>"; };
@@ -38,7 +35,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				56C037E22BC5CCAD00B04685 /* PrintingKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -69,7 +65,6 @@
 				563924972BCC49C100BD659A /* PDfRender.swift */,
 				56C037DA2BC0981200B04685 /* EnterInputView.swift */,
 				56C037D82BC096FF00B04685 /* HomeView.swift */,
-				563924952BCC37ED00BD659A /* Extensions.swift */,
 				560A1F962BB24A820065E280 /* DataModel.swift */,
 				560A1F8B2BB23FDA0065E280 /* Assets.xcassets */,
 				560A1F8D2BB23FDA0065E280 /* BPTracker.entitlements */,
@@ -103,7 +98,6 @@
 			);
 			name = BPTracker;
 			packageProductDependencies = (
-				56C037E12BC5CCAD00B04685 /* PrintingKit */,
 			);
 			productName = BPTracker;
 			productReference = 560A1F822BB23FD30065E280 /* BPTracker.app */;
@@ -134,7 +128,6 @@
 			);
 			mainGroup = 560A1F792BB23FD30065E280;
 			packageReferences = (
-				56C037E02BC5CCAC00B04685 /* XCRemoteSwiftPackageReference "PrintingKit" */,
 			);
 			productRefGroup = 560A1F832BB23FD30065E280 /* Products */;
 			projectDirPath = "";
@@ -163,7 +156,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				56C037DB2BC0981200B04685 /* EnterInputView.swift in Sources */,
-				563924962BCC37ED00BD659A /* Extensions.swift in Sources */,
 				563924982BCC49C100BD659A /* PDfRender.swift in Sources */,
 				56C037D92BC0970000B04685 /* HomeView.swift in Sources */,
 				56C037DF2BC0992F00B04685 /* ReportView.swift in Sources */,
@@ -391,25 +383,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		56C037E02BC5CCAC00B04685 /* XCRemoteSwiftPackageReference "PrintingKit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/danielsaidi/PrintingKit.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.5.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		56C037E12BC5CCAD00B04685 /* PrintingKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 56C037E02BC5CCAC00B04685 /* XCRemoteSwiftPackageReference "PrintingKit" */;
-			productName = PrintingKit;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 560A1F7A2BB23FD30065E280 /* Project object */;
 }
